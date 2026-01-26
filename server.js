@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3004;
 
 // Database
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
+const MONGODB_URI = "mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0";
 mongoose.connect(MONGODB_URI)
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
@@ -58,7 +58,7 @@ app.get('/', async (req, res) => {
 
 // Dynamic Slug Route
 app.get('/:slug', async (req, res, next) => {
-    const slug = req.params.slug.replace(/["%22]/g, ''); // Clean potential quotes from URL
+    const slug = req.params.slug.replace(/["%22]/g, '').replace(/%20/g, '-'); // Clean potential quotes and convert %20 to hyphen
     
     // 1. Check if it's a category
     const menuItem = NAV_MENU.find(m => m.href === '/' + slug);
