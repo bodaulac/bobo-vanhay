@@ -102,55 +102,74 @@ LƯU Ý QUAN TRỌNG:
 CHỈ TRẢ VỀ NỘI DUNG ĐÃ VIẾT LẠI, KHÔNG THÊM BẤT KỲ GIẢI THÍCH NÀO.
 `;
 
-        try {
-            console.log(`🤖 AI Proxy đang rewrite content...`);
+        // Try models in priority order
+        for (let i = this.currentModelIndex; i < this.MODEL_PRIORITY.length; i++) {
+            const model = this.MODEL_PRIORITY[i];
             
-            // Track cost
-            this.costTracker.totalCalls++;
-            this.costTracker.estimatedCost += this.ESTIMATED_COST_PER_CALL;
-            
-            const response = await axios.post(this.AI_PROXY_URL, {
-                model: this.DEFAULT_MODEL,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.7,
-                max_tokens: 1000
-            }, {
-                headers: { 'Authorization': this.AI_PROXY_AUTH },
-                timeout: 30000
-            });
+            try {
+                console.log(`🤖 Trying model: ${model}...`);
+                
+                // Track cost
+                this.costTracker.totalCalls++;
+                this.costTracker.estimatedCost += this.ESTIMATED_COST_PER_CALL;
+                
+                const response = await axios.post(this.AI_PROXY_URL, {
+                    model: model,
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 1000
+                }, {
+                    headers: { 'Authorization': this.AI_PROXY_AUTH },
+                    timeout: 30000
+                });
 
-            const text = response.data.choices[0].message.content;
-            
-            console.log(`✅ AI Proxy rewrite thành công!`);
-            console.log(`   Input: ${prompt.length} chars`);
-            console.log(`   Output: ${text.length} chars`);
-            console.log(`   Estimated cost: $${this.ESTIMATED_COST_PER_CALL.toFixed(6)}`);
-            console.log(`   Total cost: $${this.costTracker.estimatedCost.toFixed(6)}`);
-            
-            return text;
+                const text = response.data.choices[0].message.content;
+                
+                // Success! Set this as current model
+                this.currentModelIndex = i;
+                
+                console.log(`✅ ${model} rewrite thành công!`);
+                console.log(`   Input: ${prompt.length} chars`);
+                console.log(`   Output: ${text.length} chars`);
+                console.log(`   Estimated cost: $${this.ESTIMATED_COST_PER_CALL.toFixed(6)}`);
+                console.log(`   Total cost: $${this.costTracker.estimatedCost.toFixed(6)}`);
+                console.log(`   Current model: ${model}`);
+                
+                return text;
 
-        } catch (error) {
-            console.error('❌ AI Proxy Error:', error.message);
-            
-            // Check if error is quota-related
-            if (this.isQuotaError(error)) {
-                console.log('🚫 QUOTA EXHAUSTED DETECTED!');
-                this.handleQuotaExhaustion();
-                return this.fallbackEnhancement(originalText);
+            } catch (error) {
+                console.log(`❌ Model ${model} failed: ${error.message}`);
+                
+                // Check if quota error for Gemini
+                if (model.includes('gemini') && this.isQuotaError(error)) {
+                    console.log(`🚫 Gemini quota exhausted. Trying next model...`);
+                    this.handleQuotaExhaustion();
+                    continue;
+                }
+                
+                // For other errors, try next model
+                if (i < this.MODEL_PRIORITY.length - 1) {
+                    console.log(`🔄 Switching to next model...`);
+                    continue;
+                }
+                
+                // All models failed
+                console.error('❌ All AI models failed:', error.message);
+                
+                if (error.message.includes('ECONNREFUSED')) {
+                    console.error('💡 AI Proxy not running at http://127.0.0.1:9090');
+                    console.error('💡 Start the proxy or check the URL');
+                } else if (error.message.includes('401')) {
+                    console.error('💡 Authentication failed. Check cliproxy-secret');
+                } else if (error.message.includes('timeout')) {
+                    console.error('💡 Proxy timeout. Check proxy health');
+                }
             }
-            
-            if (error.message.includes('ECONNREFUSED')) {
-                console.error('💡 AI Proxy not running at http://127.0.0.1:9090');
-                console.error('💡 Start the proxy or check the URL');
-            } else if (error.message.includes('401')) {
-                console.error('💡 Authentication failed. Check cliproxy-secret');
-            } else if (error.message.includes('timeout')) {
-                console.error('💡 Proxy timeout. Check proxy health');
-            }
-            
-            // Fallback to simple enhancement
-            return this.fallbackEnhancement(originalText);
         }
+        
+        // All models failed, use fallback
+        console.log(`⚠️ All AI models failed. Using fallback enhancement.`);
+        return this.fallbackEnhancement(originalText);
     }
 
     /**
@@ -179,30 +198,48 @@ VIẾT PROMPT BẰNG TIẾNG ANH (cho DALL-E/Stable Diffusion):
 CHỈ TRẢ VỀ PROMPT, KHÔNG THÊM GIẢI THÍCH.
 `;
 
-        try {
-            // Track cost
-            this.costTracker.totalCalls++;
-            this.costTracker.estimatedCost += this.ESTIMATED_COST_PER_CALL;
+        // Try models in priority order (Gemini better for image prompts)
+        for (let i = 0; i < this.MODEL_PRIORITY.length; i++) {
+            const model = this.MODEL_PRIORITY[i];
             
-            const response = await axios.post(this.AI_PROXY_URL, {
-                model: this.DEFAULT_MODEL,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.7,
-                max_tokens: 500
-            }, {
-                headers: { 'Authorization': this.AI_PROXY_AUTH },
-                timeout: 30000
-            });
+            try {
+                console.log(`🎨 Generating image prompt with ${model}...`);
+                
+                // Track cost
+                this.costTracker.totalCalls++;
+                this.costTracker.estimatedCost += this.ESTIMATED_COST_PER_CALL;
+                
+                const response = await axios.post(this.AI_PROXY_URL, {
+                    model: model,
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 500
+                }, {
+                    headers: { 'Authorization': this.AI_PROXY_AUTH },
+                    timeout: 30000
+                });
 
-            const text = response.data.choices[0].message.content;
-            
-            console.log(`🎨 Image prompt generated: ${text.substring(0, 80)}...`);
-            return text.trim();
+                const text = response.data.choices[0].message.content;
+                
+                console.log(`✅ Image prompt from ${model}: OK`);
+                console.log(`   Prompt: ${text.substring(0, 80)}...`);
+                
+                return text.trim();
 
-        } catch (error) {
-            console.error('❌ Image prompt generation failed:', error.message);
-            return `Vietnamese folk art illustration of "${title}", traditional painting style, warm colors, detailed, 16:9`;
+            } catch (error) {
+                console.log(`❌ Image prompt from ${model} failed: ${error.message}`);
+                
+                // Try next model
+                if (i < this.MODEL_PRIORITY.length - 1) {
+                    console.log(`🔄 Trying next model for image prompt...`);
+                    continue;
+                }
+            }
         }
+        
+        // All models failed, use fallback
+        console.log(`⚠️ All models failed for image prompt. Using fallback.`);
+        return `Vietnamese folk art illustration of "${title}", traditional painting style, warm colors, detailed, 16:9`;
     }
 
     /**
@@ -256,39 +293,54 @@ CHỈ TRẢ VỀ PROMPT, KHÔNG THÊM GIẢI THÍCH.
      * @returns {Promise<boolean>} - Connection status
      */
     async testConnection() {
-        try {
-            console.log('🔍 Testing AI Proxy connection...');
+        console.log('🔍 Testing AI Proxy connection with model priority...');
+        
+        // Try all models
+        for (let i = 0; i < this.MODEL_PRIORITY.length; i++) {
+            const model = this.MODEL_PRIORITY[i];
             
-            const response = await axios.post(this.AI_PROXY_URL, {
-                model: this.DEFAULT_MODEL,
-                messages: [{ role: "user", content: "Viết một câu ngắn về tình bạn." }],
-                temperature: 0.7,
-                max_tokens: 50
-            }, {
-                headers: { 'Authorization': this.AI_PROXY_AUTH },
-                timeout: 10000
-            });
+            try {
+                console.log(`   Testing model: ${model}...`);
+                
+                const response = await axios.post(this.AI_PROXY_URL, {
+                    model: model,
+                    messages: [{ role: "user", content: "Viết một câu ngắn về tình bạn." }],
+                    temperature: 0.7,
+                    max_tokens: 50
+                }, {
+                    headers: { 'Authorization': this.AI_PROXY_AUTH },
+                    timeout: 10000
+                });
 
-            const text = response.data.choices[0].message.content;
-            
-            console.log('✅ AI Proxy connection successful!');
-            console.log(`   Test response: ${text.substring(0, 50)}...`);
-            return true;
-            
-        } catch (error) {
-            console.error('❌ AI Proxy connection failed:', error.message);
-            
-            if (error.message.includes('ECONNREFUSED')) {
-                console.error('💡 AI Proxy not running at http://127.0.0.1:9090');
-                console.error('💡 Check if proxy service is started');
-            } else if (error.message.includes('401')) {
-                console.error('💡 Authentication failed. Check cliproxy-secret');
-            } else if (error.message.includes('timeout')) {
-                console.error('💡 Proxy timeout. Check proxy health');
+                const text = response.data.choices[0].message.content;
+                
+                console.log(`✅ ${model} connection successful!`);
+                console.log(`   Test response: ${text.substring(0, 50)}...`);
+                
+                // Set this as current model if it's working
+                this.currentModelIndex = i;
+                console.log(`   Current model set to: ${model}`);
+                
+                return true;
+                
+            } catch (error) {
+                console.log(`❌ ${model} connection failed: ${error.message}`);
+                
+                // Try next model
+                if (i < this.MODEL_PRIORITY.length - 1) {
+                    console.log(`   Trying next model...`);
+                    continue;
+                }
             }
-            
-            return false;
         }
+        
+        console.error('❌ All AI Proxy connections failed');
+        console.error('💡 Check:');
+        console.error('   1. AI Proxy at http://127.0.0.1:9090');
+        console.error('   2. Authentication: Bearer cliproxy-secret');
+        console.error('   3. Internet connection');
+        
+        return false;
     }
 
     /**
