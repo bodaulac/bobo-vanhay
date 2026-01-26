@@ -8,9 +8,60 @@ const PORT = process.env.PORT || 3004;
 
 // Database
 const MONGODB_URI = "mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0";
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+
+// Improved MongoDB connection with retry logic
+async function connectMongoDB() {
+    let retries = 5;
+    
+    while (retries > 0) {
+        try {
+            await mongoose.connect(MONGODB_URI, {
+                serverSelectionTimeoutMS: 5000,
+                socketTimeoutMS: 45000,
+                maxPoolSize: 10,
+                retryWrites: true,
+                w: 'majority'
+            });
+            console.log('✅ Connected to MongoDB');
+            return;
+        } catch (err) {
+            console.error(`❌ MongoDB Connection Error (${retries} retries left):`, err.message);
+            retries--;
+            
+            if (retries === 0) {
+                console.error('❌ Failed to connect to MongoDB after multiple attempts');
+                console.error('💡 Check:');
+                console.error('   1. MongoDB Docker container is running');
+                console.error('   2. Password is correct: examplepassword');
+                console.error('   3. Network connectivity');
+                // Don't crash the app, continue without DB
+                return;
+            }
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+}
+
+connectMongoDB();
+
+// MongoDB connection event listeners
+mongoose.connection.on('connected', () => {
+    console.log('🔗 MongoDB connected successfully');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('⚠️ MongoDB disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+    console.log('🔄 MongoDB reconnected');
+});
 
 // Basic Work Model
 const WorkSchema = new mongoose.Schema({
