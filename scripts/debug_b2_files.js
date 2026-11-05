@@ -1,11 +1,12 @@
 const axios = require('axios');
+const config = require('../config.js');
 
 async function listFiles() {
     // The keyID provided might NOT be the accountId. In B2, the accountId is usually a shorter string.
     // However, the authorize_account call accepts the keyID as accountId for Master Keys.
     // Let's try to authorize and see what accountId it returns.
-    const keyID = '005a2c220d9db480000000003';
-    const applicationKey = 'K005XqKlkjAY9kIG/w8AmrUotVwSTkE';
+    const keyID = config.b2.keyId;
+    const applicationKey = config.b2.key;
     const authBase64 = Buffer.from(`${keyID}:${applicationKey}`).toString('base64');
 
     try {

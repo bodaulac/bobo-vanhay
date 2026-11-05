@@ -1,30 +1,15 @@
 import axios from 'axios';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import config from '../config.js';
+import Work from '../models/Work.js';
 
 // Configuration
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
+const MONGODB_URI = config.mongodbUri;
 
 // Backblaze B2 Configuration
-const B2_KEY_ID = '005a2c220d9db480000000003';
-const B2_APP_KEY = 'K005XqKlkjAY9kIG/w8AmrUotVwSTkE';
-const B2_AUTH_BASE64 = Buffer.from(`${B2_KEY_ID}:${B2_APP_KEY}`).toString('base64');
+const B2_AUTH_BASE64 = config.b2.authBase64;
 
-// MongoDB Schema
-const WorkSchema = new mongoose.Schema({
-    title: String,
-    author: String,
-    content: String,
-    excerpt: String,
-    thumbnail: String,
-    type: String,
-    category: String,
-    slug: { type: String, unique: true },
-    sourceUrl: String,
-    b2ImageUrl: String
-}, { timestamps: true });
-
-const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema);
 
 // Create a simple 1x1 pixel PNG image buffer
 function createTestImageBuffer() {

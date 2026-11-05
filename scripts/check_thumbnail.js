@@ -1,12 +1,13 @@
 const mongoose = require('mongoose');
+const config = require('../config.js');
+const Work = require('../models/Work.js');
 
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
+const MONGODB_URI = config.mongodbUri;
 
 async function checkThumbnail() {
     try {
         await mongoose.connect(MONGODB_URI);
-        const WorkSchema = new mongoose.Schema({}, { strict: false });
-        const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema, 'works');
+        
         
         const works = await Work.find({ thumbnail: { $exists: true, $ne: null } }).limit(5);
         console.log('Works with thumbnails:');

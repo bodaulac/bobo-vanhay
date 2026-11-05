@@ -1,26 +1,13 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import mongoose from 'mongoose';
+import config from '../config.js';
+import Work from '../models/Work.js';
 
 // Configuration
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
-const AI_PROXY_URL = "http://127.0.0.1:9090/v1/chat/completions";
+const MONGODB_URI = config.mongodbUri;
+const AI_PROXY_URL = config.aiProxy.url;
 
-// MongoDB Schema
-const WorkSchema = new mongoose.Schema({
-    title: String,
-    author: String,
-    content: String,
-    excerpt: String,
-    thumbnail: String,
-    type: String,
-    category: String,
-    slug: { type: String, unique: true },
-    sourceUrl: String,
-    views: { type: Number, default: 0 }
-}, { timestamps: true });
-
-const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema);
 
 function slugify(text) {
     if (!text) return 'no-title-' + Date.now();
@@ -43,7 +30,7 @@ async function testAI() {
             messages: [{ role: "user", content: "Viết một đoạn văn ngắn 100 từ về tình bạn theo phong cách cổ điển Việt Nam" }],
             temperature: 0.7
         }, {
-            headers: { 'Authorization': 'Bearer cliproxy-secret' },
+            headers: { 'Authorization': config.aiProxy.auth },
             timeout: 30000
         });
 

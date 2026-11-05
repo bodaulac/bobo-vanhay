@@ -1,28 +1,12 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import mongoose from 'mongoose';
+import config from '../config.js';
+import Work from '../models/Work.js';
 
 // Configuration
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
+const MONGODB_URI = config.mongodbUri;
 
-// MongoDB Schema
-const WorkSchema = new mongoose.Schema({
-    title: String,
-    author: String,
-    content: String,
-    excerpt: String,
-    thumbnail: String,
-    type: String,
-    category: String,
-    subcategory: String,
-    tags: [String],
-    slug: { type: String, unique: true },
-    sourceUrl: String,
-    views: { type: Number, default: 0 },
-    aiEnhanced: { type: Boolean, default: false }
-}, { timestamps: true });
-
-const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema);
 
 // Helper Functions
 function slugify(text) {

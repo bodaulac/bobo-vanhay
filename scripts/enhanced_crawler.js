@@ -2,35 +2,16 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import config from '../config.js';
+import Work from '../models/Work.js';
 
 // Configuration
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
-const AI_PROXY_URL = "http://127.0.0.1:9090/v1/chat/completions";
+const MONGODB_URI = config.mongodbUri;
+const AI_PROXY_URL = config.aiProxy.url;
 
 // Backblaze B2 Configuration
-const B2_KEY_ID = '005a2c220d9db480000000003';
-const B2_APP_KEY = 'K005XqKlkjAY9kIG/w8AmrUotVwSTkE';
-const B2_AUTH_BASE64 = Buffer.from(`${B2_KEY_ID}:${B2_APP_KEY}`).toString('base64');
+const B2_AUTH_BASE64 = config.b2.authBase64;
 
-// MongoDB Schema
-const WorkSchema = new mongoose.Schema({
-    title: String,
-    author: String,
-    content: String,
-    excerpt: String,
-    thumbnail: String,
-    type: String,
-    category: String,
-    subcategory: String,
-    tags: [String],
-    slug: { type: String, unique: true },
-    sourceUrl: String,
-    views: { type: Number, default: 0 },
-    aiGenerated: { type: Boolean, default: true },
-    b2ImageUrl: String
-}, { timestamps: true });
-
-const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema);
 
 // Helper Functions
 function slugify(text) {
@@ -125,7 +106,7 @@ async function rewriteWithAI(title, originalContent, category) {
             temperature: 0.7,
             response_format: { type: "json_object" }
         }, {
-            headers: { 'Authorization': 'Bearer cliproxy-secret' },
+            headers: { 'Authorization': config.aiProxy.auth },
             timeout: 90000
         });
 
@@ -159,7 +140,7 @@ async function generateImageWithAI(title, category) {
             messages: [{ role: "user", content: prompt }],
             temperature: 0.8
         }, {
-            headers: { 'Authorization': 'Bearer cliproxy-secret' },
+            headers: { 'Authorization': config.aiProxy.auth },
             timeout: 60000
         });
 

@@ -4,15 +4,13 @@ Hệ thống văn học Việt Nam với AI enhancement và crawler tự động
 
 ## 🚀 Tính năng chính
 
-### 📚 Crawler System (8 crawlers)
+### 📚 Crawler System (6 crawlers)
 1. **gemini_crawler.js** - Crawl + AI enhancement với Gemini Pro 3
 2. **enhanced_crawler.js** - Crawl + local AI (Ollama)
 3. **simple_crawler.js** - Crawl cơ bản từ truyencotich.net
 4. **simple_crawler_with_b2.js** - Crawl + upload ảnh lên Backblaze B2
 5. **local_ai_crawler.js** - Crawl + local AI processing
 6. **power_crawler.js** - Batch processing crawler
-7. **crawler_truyencotich.js** - Legacy crawler
-8. **crawler_rewrite.js** - Crawl + basic rewrite
 
 ### 🤖 AI Enhancement
 - **Gemini Pro 3** - Chất lượng cao nhất
@@ -37,12 +35,14 @@ Hệ thống văn học Việt Nam với AI enhancement và crawler tự động
 ```
 bobo-vanhoc-v2/
 ├── server.js              # Web server chính
+├── config.js              # Cấu hình từ .env
+├── .env.example           # Mẫu biến môi trường
 ├── ecosystem.config.js    # PM2 configuration
 ├── package.json          # Dependencies
 ├── README.md             # This file
 ├── .gitignore           # Git ignore rules
 ├── models/              # Mongoose models
-├── scripts/             # 8 crawler scripts
+├── scripts/             # 6 crawler scripts
 ├── public/              # Static files (CSS, JS, images)
 ├── views/               # EJS templates
 └── node_modules/        # Dependencies
@@ -66,7 +66,7 @@ cp .env.example .env
 docker run -d --name xs-mongo \
   -p 27017:27017 \
   -e MONGO_INITDB_ROOT_USERNAME=root \
-  -e MONGO_INITDB_ROOT_PASSWORD=examplepassword \
+  -e MONGO_INITDB_ROOT_PASSWORD=<mật-khẩu-của-bạn> \
   mongo:latest --replSet rs0 --auth
 
 # Initialize replica set
@@ -101,8 +101,7 @@ pm2 stop bobo-vanhoc
 
 ```bash
 # Check số lượng stories
-cd /home/jay/bobo-vanhoc-v2
-node -e "const mongoose = require('mongoose'); mongoose.connect('mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0').then(async () => { const Story = mongoose.models.Work || mongoose.model('Work', new mongoose.Schema({})); const count = await Story.countDocuments(); console.log('📊 Total stories:', count); mongoose.disconnect(); })"
+node scripts/check_db.js
 ```
 
 ## 🎯 Crawler Usage
@@ -123,14 +122,17 @@ node scripts/simple_crawler_with_b2.js
 Tạo file `.env`:
 
 ```env
-MONGODB_URI=mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0
-GEMINI_API_KEY=your_gemini_api_key
-DEEPSEEK_API_KEY=your_deepseek_api_key
+MONGODB_URI=mongodb://USER:PASSWORD@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0
+AI_PROXY_URL=http://127.0.0.1:9090/v1/chat/completions
+AI_PROXY_KEY=your_proxy_key
 B2_APPLICATION_KEY_ID=your_b2_key_id
 B2_APPLICATION_KEY=your_b2_key
 B2_BUCKET_NAME=your_bucket_name
 PORT=3004
+PAGE_SIZE=12
 ```
+
+Xem đầy đủ trong `.env.example`. Cấu hình đọc qua `config.js`; schema dùng chung ở `models/Work.js`.
 
 ## 📈 Monitoring
 

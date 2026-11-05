@@ -2,25 +2,11 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import mongoose from 'mongoose';
 import imageService from '../src/lib/services/imageService.js';
+import config from '../config.js';
+import Work from '../models/Work.js';
 
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
-const AI_PROXY_URL = "http://127.0.0.1:9090/v1/chat/completions";
-
-const WorkSchema = new mongoose.Schema({
-    title: String,
-    author: String,
-    content: String,
-    excerpt: String,
-    thumbnail: String,
-    type: String,
-    category: String,
-    tags: [String],
-    slug: { type: String, unique: true },
-    sourceUrl: String,
-    views: { type: Number, default: 0 }
-}, { timestamps: true });
-
-const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema);
+const MONGODB_URI = config.mongodbUri;
+const AI_PROXY_URL = config.aiProxy.url;
 
 function slugify(text) {
     if (!text) return 'no-title-' + Date.now();
@@ -65,7 +51,7 @@ async function rewriteAndIllustrate(title, originalContent, category, originalIm
             messages: [{ role: "user", content: prompt }],
             temperature: 0.8,
             response_format: { type: "json_object" }
-        }, { headers: { 'Authorization': 'Bearer cliproxy-secret' }, timeout: 240000 });
+        }, { headers: { 'Authorization': config.aiProxy.auth }, timeout: 240000 });
 
         let rawContent = response.data.choices[0].message.content;
         rawContent = rawContent.replace(/```json\n?|```/g, '').trim();

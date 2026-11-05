@@ -139,7 +139,7 @@ testAIRewrite().then(result => {
 EOF
 
 echo "🚀 Running AI test..."
-cd /home/jay/bobo-vanhoc-v2
+cd "$(dirname "$0")/.."
 node /tmp/test_ai_rewrite.js
 
 # Kill Ollama process

@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const config = require('../config.js');
+const Work = require('../models/Work.js');
 
-const MONGODB_URI = "mongodb://root:examplepassword@localhost:27017/bobo-vanhoc?authSource=admin";
+const MONGODB_URI = config.mongodbUri;
 
 async function checkDB() {
     try {
@@ -8,8 +10,7 @@ async function checkDB() {
         const collections = await mongoose.connection.db.listCollections().toArray();
         console.log('Collections:', collections.map(c => c.name));
         
-        const WorkSchema = new mongoose.Schema({}, { strict: false });
-        const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema, 'works');
+        
         
         const count = await Work.countDocuments();
         console.log('Total Works in "works" collection:', count);

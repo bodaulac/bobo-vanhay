@@ -1,9 +1,10 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const config = require('../config.js');
 
 async function testB2Upload() {
-    const keyId = '005a2c220d9db480000000003';
-    const applicationKey = 'K005XqKlkjAY9kIG/w8AmrUotVwSTkE';
+    const keyId = config.b2.keyId;
+    const applicationKey = config.b2.key;
     const authBase64 = Buffer.from(`${keyId}:${applicationKey}`).toString('base64');
 
     console.log('🧪 Testing B2 Authentication...');
