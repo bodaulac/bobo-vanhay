@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Văn Hay Admin</string>
+    <string name="login_title">Đăng nhập quản trị</string>
+    <string name="login_hint">Mật khẩu quản trị (ADMIN_TOKEN)</string>
+    <string name="login_ok">Đăng nhập</string>
+    <string name="login_cancel">Huỷ</string>
+</resources>

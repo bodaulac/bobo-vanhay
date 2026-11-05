@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Địa chỉ website, đổi bằng: gradle assembleDebug -PappUrl=https://ten-mien-cua-ban
+def appUrl = (project.findProperty('appUrl') ?: 'https://vanhay.info').toString().replaceAll('/+$', '')
+
+android {
+    namespace 'com.vanhay.admin'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.vanhay.admin'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+        buildConfigField 'String', 'APP_URL', "\"${appUrl}\""
+        // Chỉ cho phép http thuần khi địa chỉ là http:// (thử nghiệm mạng nội bộ)
+        manifestPlaceholders = [cleartext: appUrl.startsWith('http://') ? 'true' : 'false']
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}

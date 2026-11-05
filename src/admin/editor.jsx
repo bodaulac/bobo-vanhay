@@ -108,16 +108,16 @@ function App() {
         <div>
             <div className="flex flex-wrap items-center gap-3 mb-4">
                 <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Tiêu đề chương"
-                    className="flex-1 min-w-[16rem] text-2xl font-serif font-bold bg-transparent border-b border-stone-300 outline-none py-1" />
+                    className="flex-1 min-w-0 w-full text-2xl font-serif font-bold bg-transparent border-b border-stone-300 outline-none py-1" />
                 <span className="text-xs font-bold uppercase tracking-widest text-stone-400">{status === 'published' ? 'Đã đăng' : 'Bản nháp'}</span>
             </div>
 
-            <div className="sticky top-20 z-10 flex flex-wrap items-center gap-2 bg-white/95 border border-stone-200 rounded-2xl p-3 mb-4">
+            <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-white/95 border border-stone-200 rounded-2xl p-3 mb-4">
                 {AI_ACTIONS.map((a) => (
                     <button key={a.option} type="button" disabled={busy} className={btn} onClick={() => runAI(a.option)}>✨ {a.label}</button>
                 ))}
                 <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="Yêu cầu riêng cho đoạn bôi đen..."
-                    aria-label="Yêu cầu riêng cho AI" className="flex-1 min-w-[12rem] text-sm bg-stone-100 rounded-full px-4 py-1.5 outline-none" />
+                    aria-label="Yêu cầu riêng cho AI" className="flex-1 min-w-0 w-full sm:w-auto text-sm bg-stone-100 rounded-full px-4 py-1.5 outline-none" />
                 <button type="button" disabled={busy || !command.trim()} className={btn} onClick={() => runAI('zap', command)}>Thực hiện</button>
             </div>
 
@@ -126,7 +126,7 @@ function App() {
                     extensions={extensions}
                     injectCSS={false}
                     initialContent={undefined}
-                    className="bg-white border border-stone-200 rounded-3xl p-8 min-h-[24rem]"
+                    className="bg-white border border-stone-200 rounded-3xl p-4 md:p-8 min-h-[20rem]"
                     editorProps={{ attributes: { class: 'work-content focus:outline-none max-w-none' } }}
                     onCreate={({ editor }) => {
                         editorRef.current = editor;

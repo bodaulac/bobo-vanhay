@@ -60,6 +60,19 @@ Script tạo `workspace/<tên>/`, copy quy tắc tiếng Việt từ `ainovel/ru
 
 **3. Build trình soạn thảo:** `npm run build` (CSS + `public/assets/editor.js`); cả hai file đã được commit sẵn. Nên giới hạn `/admin` theo IP hoặc VPN ở nginx.
 
+### 📱 App Android quản trị (APK)
+
+Thư mục `android/` là vỏ WebView mở `/admin` của website, để admin tạo truyện, soạn chương và dùng nút AI ngay trên điện thoại (mật khẩu quản trị được mã hoá bằng Android Keystore; liên kết ra ngoài mở bằng trình duyệt).
+
+```bash
+cd android
+# Cần JDK 17+, Gradle 8.x và Android SDK (platform 34, build-tools 34.0.0); trỏ ANDROID_HOME hoặc tạo android/local.properties (sdk.dir=...)
+gradle assembleDebug -PappUrl=https://vanhay.info
+# → android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Cài APK lên điện thoại (bật "cài từ nguồn không rõ"), mở app, nhập `ADMIN_TOKEN` ở lần đầu. Muốn xoá mật khẩu đã lưu: Cài đặt → Ứng dụng → Văn Hay Admin → Xoá dữ liệu. APK build ở chế độ debug (ký bằng khoá debug) — đủ để cài thủ công; muốn phát hành lâu dài hãy build `assembleRelease` với keystore riêng.
+
 ### 🌐 Web Interface
 - **Express.js server** trên port 3004
 - **EJS templates** cho frontend
