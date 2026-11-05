@@ -1,0 +1,30 @@
+<%- include('_top', { pageTitle: 'Truyện dài' }) %>
+        <h1 class="text-3xl font-serif font-bold mb-8">Truyện dài</h1>
+
+        <form data-form="create-novel" class="bg-white border border-stone-200 rounded-3xl p-6 mb-10 space-y-3">
+            <h2 class="font-bold">Tạo truyện mới</h2>
+            <input name="title" required maxlength="200" placeholder="Tên truyện" aria-label="Tên truyện" class="w-full border border-stone-200 rounded-xl px-4 py-2">
+            <textarea name="synopsis" rows="3" maxlength="5000" placeholder="Giới thiệu ngắn" aria-label="Giới thiệu" class="w-full border border-stone-200 rounded-xl px-4 py-2"></textarea>
+            <button class="px-5 py-2 rounded-full bg-amber-900 text-white text-sm font-bold">Tạo truyện</button>
+            <span data-msg role="status" class="text-sm text-amber-900 ml-2"></span>
+        </form>
+
+        <% if (novels.length === 0) { %>
+            <p class="text-stone-500">Chưa có truyện nào. Tạo mới ở trên hoặc import từ ainovel-cli (<code>scripts/import_ainovel.js</code>).</p>
+        <% } %>
+        <ul class="space-y-3">
+            <% novels.forEach(n => { const c = byNovel[n.slug] || { draft: 0, published: 0 }; %>
+                <li class="bg-white border border-stone-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+                    <div>
+                        <a href="/admin/novels/<%= n.slug %>" class="font-serif font-bold text-lg no-underline text-stone-900"><%= n.title %></a>
+                        <p class="text-xs text-stone-500 mt-1">
+                            <%= n.status === 'published' ? 'Đã đăng' : 'Bản nháp' %> ·
+                            <%= c.published %> chương đã đăng / <%= c.draft %> nháp ·
+                            <%= n.source === 'ainovel' ? 'ainovel-cli' : 'viết tay' %>
+                        </p>
+                    </div>
+                    <a href="/admin/novels/<%= n.slug %>" class="text-xs font-bold underline text-amber-900">Quản lý</a>
+                </li>
+            <% }) %>
+        </ul>
+<%- include('_bottom') %>

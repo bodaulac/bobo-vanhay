@@ -1,0 +1,34 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+    <main class="max-w-4xl mx-auto px-4 py-12">
+        <nav aria-label="Đường dẫn" class="text-xs font-bold text-stone-400 mb-6"><a href="/sach" class="underline">Truyện dài</a></nav>
+        <h1 class="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-4"><%= novel.title %></h1>
+        <p class="text-xs font-bold uppercase tracking-widest text-stone-400 mb-8">Tác giả: <%= novel.author %> · <%= total %> chương</p>
+        <p class="text-stone-600 leading-relaxed text-lg mb-10 whitespace-pre-line"><%= novel.synopsis %></p>
+
+        <% if (chapters.length > 0) { %>
+            <a href="/sach/<%= novel.slug %>/chuong-<%= chapters[0].no %>" class="inline-block mb-10 px-8 py-3 rounded-full bg-amber-900 text-white font-bold no-underline">Đọc từ đầu</a>
+        <% } %>
+
+        <h2 class="text-2xl font-serif font-bold mb-6">Danh sách chương</h2>
+        <% if (chapters.length === 0) { %><p class="text-stone-500">Chưa có chương nào được đăng.</p><% } %>
+        <ol class="bg-white border border-stone-200 rounded-3xl divide-y divide-stone-100">
+            <% chapters.forEach(ch => { %>
+                <li><a href="/sach/<%= novel.slug %>/chuong-<%= ch.no %>" class="flex items-center justify-between gap-4 px-6 py-3 no-underline text-stone-700 hover:text-amber-900">
+                    <span><span class="text-stone-400 mr-2"><%= ch.no %>.</span><%= ch.title %></span>
+                    <span class="text-xs text-stone-400 whitespace-nowrap"><%= ch.wordCount %> từ</span>
+                </a></li>
+            <% }) %>
+        </ol>
+
+        <% if (pagination.totalPages > 1) { %>
+            <nav class="flex items-center justify-center gap-4 mt-10 text-sm font-bold" aria-label="Phân trang">
+                <% if (pagination.page > 1) { %><a href="<%= pagination.url(pagination.page - 1) %>" rel="prev" class="px-5 py-2 rounded-full bg-white border border-stone-200 no-underline">← Trước</a><% } %>
+                <span class="text-stone-400">Trang <%= pagination.page %> / <%= pagination.totalPages %></span>
+                <% if (pagination.page < pagination.totalPages) { %><a href="<%= pagination.url(pagination.page + 1) %>" rel="next" class="px-5 py-2 rounded-full bg-white border border-stone-200 no-underline">Sau →</a><% } %>
+            </nav>
+        <% } %>
+    </main>
+
+<%- include('partials/footer') %>

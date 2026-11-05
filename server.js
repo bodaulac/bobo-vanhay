@@ -1,11 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const compression = require('compression');
-const sanitizeHtml = require('sanitize-html');
 const path = require('path');
 const config = require('./config');
 const Work = require('./models/Work');
+const Novel = require('./models/Novel');
+const Chapter = require('./models/Chapter');
+const adminRouter = require('./src/routes/admin');
+const novelsRouter = require('./src/routes/novels');
 const seo = require('./src/lib/seo');
+const { renderContent } = require('./src/lib/content');
 
 const app = express();
 const PORT = config.port;
@@ -71,7 +75,6 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d' }));
-app.use(express.json());
 
 // Consistent Navigation Menu
 const NAV_MENU = [
@@ -82,8 +85,12 @@ const NAV_MENU = [
     { name: 'Truyện Cười', href: '/truyen-cuoi', icon: '😆' },
     { name: 'Truyện Thiếu Nhi', href: '/truyen-thieu-nhi', icon: '🎈' },
     { name: 'Quà Tặng Cuộc Sống', href: '/qua-tang-cuoc-song', icon: '🎁' },
-    { name: 'Thơ Cho Bé', href: '/tho-cho-be', icon: '📜' }
+    { name: 'Thơ Cho Bé', href: '/tho-cho-be', icon: '📜' },
+    { name: 'Truyện Dài', href: '/sach', icon: '📖' }
 ];
+
+app.use('/admin', adminRouter);
+app.use('/sach', novelsRouter(NAV_MENU));
 
 // Chỉ lấy các trường cần cho thẻ danh sách (không tải `content`)
 const LIST_FIELDS = 'title slug excerpt thumbnail author category createdAt';
@@ -91,16 +98,6 @@ const LIST_FIELDS = 'title slug excerpt thumbnail author category createdAt';
 function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-
-// Nội dung do crawler/AI sinh ra được lưu dạng HTML: lọc trước khi hiển thị
-const CONTENT_SANITIZE = {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'img', 'figure', 'figcaption', 'u']),
-    allowedAttributes: { a: ['href', 'title'], img: ['src', 'alt', 'title'] },
-    allowedSchemes: ['http', 'https', 'mailto'],
-    transformTags: {
-        a: sanitizeHtml.simpleTransform('a', { rel: 'nofollow noopener noreferrer', target: '_blank' })
-    }
-};
 
 function menuItemForCategory(category) {
     if (!category) return undefined;
@@ -151,11 +148,19 @@ app.get('/sitemap.xml', async (req, res) => {
             const works = await Work.find({ slug: { $exists: true, $ne: '' } })
                 .select('slug updatedAt')
                 .sort({ createdAt: -1 })
-                .limit(SITEMAP_MAX_URLS - NAV_MENU.length - 1)
+                .limit(SITEMAP_MAX_URLS - NAV_MENU.length - 1000)
                 .lean();
             const entries = [{ path: '/' }]
                 .concat(NAV_MENU.map((m) => ({ path: m.href })))
                 .concat(works.map((w) => ({ path: '/' + w.slug, lastmod: w.updatedAt })));
+            const novels = await Novel.find({ status: 'published' }).select('slug updatedAt').lean();
+            novels.forEach((n) => entries.push({ path: `/sach/${n.slug}`, lastmod: n.updatedAt }));
+            const remaining = SITEMAP_MAX_URLS - entries.length;
+            if (novels.length && remaining > 0) {
+                const chapters = await Chapter.find({ novel: { $in: novels.map((n) => n.slug) }, status: 'published' })
+                    .select('novel no updatedAt').limit(remaining).lean();
+                chapters.forEach((c) => entries.push({ path: `/sach/${c.novel}/chuong-${c.no}`, lastmod: c.updatedAt }));
+            }
             sitemapCache = { xml: seo.buildSitemap(entries), at: Date.now() };
         }
         res.type('application/xml').send(sitemapCache.xml);
@@ -265,7 +270,7 @@ app.get('/:slug', async (req, res, next) => {
             work,
             related,
             menu: NAV_MENU,
-            contentHtml: sanitizeHtml(work.content || '', CONTENT_SANITIZE),
+            contentHtml: renderContent(work.content),
             source: sourceInfo(work.sourceUrl),
             seo: seo.workSeo(work, menuItemForCategory(work.category))
         });

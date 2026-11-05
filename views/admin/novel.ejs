@@ -1,0 +1,37 @@
+<%- include('_top', { pageTitle: novel.title }) %>
+        <p class="mb-6"><a href="/admin" class="text-xs font-bold underline text-stone-500">← Danh sách truyện</a></p>
+        <h1 class="text-3xl font-serif font-bold mb-8"><%= novel.title %></h1>
+
+        <form data-form="update-novel" data-slug="<%= novel.slug %>" class="bg-white border border-stone-200 rounded-3xl p-6 mb-10 space-y-3">
+            <input name="title" required maxlength="200" value="<%= novel.title %>" aria-label="Tên truyện" class="w-full border border-stone-200 rounded-xl px-4 py-2">
+            <input name="author" maxlength="100" value="<%= novel.author %>" aria-label="Tác giả" class="w-full border border-stone-200 rounded-xl px-4 py-2">
+            <textarea name="synopsis" rows="4" maxlength="5000" aria-label="Giới thiệu" class="w-full border border-stone-200 rounded-xl px-4 py-2"><%= novel.synopsis %></textarea>
+            <label class="block text-sm"><span class="mr-2 font-bold">Trạng thái:</span>
+                <select name="status" class="border border-stone-200 rounded-xl px-3 py-1">
+                    <option value="draft" <%= novel.status === 'draft' ? 'selected' : '' %>>Bản nháp (ẩn)</option>
+                    <option value="published" <%= novel.status === 'published' ? 'selected' : '' %>>Đã đăng</option>
+                </select>
+            </label>
+            <button class="px-5 py-2 rounded-full bg-amber-900 text-white text-sm font-bold">Lưu thông tin</button>
+            <% if (novel.status === 'published') { %><a href="/sach/<%= novel.slug %>" class="text-xs font-bold underline ml-3">Xem trang công khai</a><% } %>
+            <span data-msg role="status" class="text-sm text-amber-900 ml-2"></span>
+        </form>
+
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-serif font-bold">Chương (<%= chapters.length %>)</h2>
+            <button type="button" data-action="add-chapter" data-slug="<%= novel.slug %>" class="px-4 py-2 rounded-full border border-stone-300 text-xs font-bold">+ Thêm chương</button>
+        </div>
+        <p class="text-xs text-stone-500 mb-4">Chương chỉ hiện ra công khai khi cả truyện lẫn chương đều ở trạng thái "Đã đăng".</p>
+        <ul class="space-y-2">
+            <% chapters.forEach(ch => { %>
+                <li class="bg-white border border-stone-200 rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+                    <a href="/admin/novels/<%= novel.slug %>/chapters/<%= ch.no %>" class="no-underline text-stone-900">
+                        <span class="text-stone-400 mr-2"><%= ch.no %>.</span><span class="font-bold"><%= ch.title %></span>
+                    </a>
+                    <span class="text-xs text-stone-500 whitespace-nowrap">
+                        <%= ch.status === 'published' ? 'Đã đăng' : 'Nháp' %> · <%= ch.wordCount %> từ<%= ch.editedAt ? ' · đã sửa tay' : '' %>
+                    </span>
+                </li>
+            <% }) %>
+        </ul>
+<%- include('_bottom') %>

@@ -94,6 +94,59 @@ function workSeo(work, menuItem) {
     };
 }
 
+
+function novelsSeo() {
+    return {
+        title: pageTitle('Truyện dài'),
+        description: 'Truyện dài nhiều chương, đọc online miễn phí tại ' + config.siteName + '.',
+        canonical: config.siteUrl + '/sach'
+    };
+}
+
+function novelSeo(novel, page, totalPages) {
+    const url = (n) => `${config.siteUrl}/sach/${novel.slug}${n > 1 ? `?page=${n}` : ''}`;
+    const description = truncate(stripHtml(novel.synopsis), 160) || SITE_DESCRIPTION;
+    return {
+        title: pageTitle(novel.title + (page > 1 ? ` – Trang ${page}` : '')),
+        description,
+        canonical: url(page),
+        prev: page > 1 ? url(page - 1) : undefined,
+        next: page < totalPages ? url(page + 1) : undefined,
+        image: absoluteUrl(novel.thumbnail),
+        type: 'book',
+        jsonLd: [{
+            '@context': 'https://schema.org',
+            '@type': 'Book',
+            name: novel.title,
+            description,
+            inLanguage: 'vi',
+            author: { '@type': 'Person', name: novel.author },
+            url: url(1)
+        }]
+    };
+}
+
+function chapterSeo(novel, chapter) {
+    const canonical = `${config.siteUrl}/sach/${novel.slug}/chuong-${chapter.no}`;
+    const description = truncate(stripHtml(chapter.content), 160) || truncate(stripHtml(novel.synopsis), 160) || SITE_DESCRIPTION;
+    return {
+        title: pageTitle(`${novel.title} – Chương ${chapter.no}: ${chapter.title}`),
+        description,
+        canonical,
+        type: 'article',
+        jsonLd: [{
+            '@context': 'https://schema.org',
+            '@type': 'Chapter',
+            name: chapter.title,
+            position: chapter.no,
+            inLanguage: 'vi',
+            url: canonical,
+            isPartOf: { '@type': 'Book', name: novel.title, url: `${config.siteUrl}/sach/${novel.slug}` },
+            dateModified: chapter.updatedAt ? new Date(chapter.updatedAt).toISOString() : undefined
+        }]
+    };
+}
+
 function searchSeo(q) {
     return {
         title: pageTitle(q ? `Kết quả cho “${q}”` : 'Tìm kiếm'),
@@ -123,4 +176,4 @@ function robotsTxt() {
     return `User-agent: *\nAllow: /\nDisallow: /tim-kiem\n\nSitemap: ${config.siteUrl}/sitemap.xml\n`;
 }
 
-module.exports = { homeSeo, categorySeo, workSeo, searchSeo, notFoundSeo, buildSitemap, robotsTxt, stripHtml };
+module.exports = { homeSeo, categorySeo, workSeo, novelsSeo, novelSeo, chapterSeo, searchSeo, notFoundSeo, buildSitemap, robotsTxt, stripHtml };

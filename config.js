@@ -32,5 +32,7 @@ module.exports = {
             return Buffer.from(`${b2KeyId}:${b2Key}`).toString('base64');
         }
     },
+    adminToken: process.env.ADMIN_TOKEN || '',
+    aiModel: process.env.AI_MODEL || 'deepseek-chat',
     pageSize: Number(process.env.PAGE_SIZE) || 12
 };
