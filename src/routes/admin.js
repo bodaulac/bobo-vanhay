@@ -66,6 +66,19 @@ router.use((req, res, next) => {
 
 router.use(express.json({ limit: '2mb' }));
 
+// Hàm hỗ trợ cho view quản trị
+router.use((req, res, next) => {
+    res.locals.ico = (name, extra) => `<svg class="ico ${extra || ''}"><use href="#i-${name}"/></svg>`;
+    res.locals.cover = (slug) => {
+        let h = 0;
+        for (const c of String(slug)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+        return 'cover-' + (h % 8);
+    };
+    res.locals.initial = (title) => (String(title).trim()[0] || 'V').toUpperCase();
+    res.locals.pct10 = (a, b) => 'p-' + (b ? Math.round((a / b) * 10) * 10 : 0);
+    next();
+});
+
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const parseNo = (value) => {
     const n = parseInt(value, 10);
@@ -83,13 +96,17 @@ async function loadNovel(req, res) {
 // ---- Trang ----
 router.get('/', wrap(async (req, res) => {
     const novels = await Novel.find().sort({ updatedAt: -1 }).lean();
-    const counts = await Chapter.aggregate([{ $group: { _id: { novel: '$novel', status: '$status' }, n: { $sum: 1 } } }]);
+    const counts = await Chapter.aggregate([{ $group: { _id: { novel: '$novel', status: '$status' }, n: { $sum: 1 }, words: { $sum: '$wordCount' } } }]);
     const byNovel = {};
+    const totals = { novels: novels.length, published: 0, draft: 0, words: 0 };
     counts.forEach((c) => {
-        byNovel[c._id.novel] = byNovel[c._id.novel] || { draft: 0, published: 0 };
-        byNovel[c._id.novel][c._id.status] = c.n;
+        const entry = byNovel[c._id.novel] = byNovel[c._id.novel] || { draft: 0, published: 0, words: 0 };
+        entry[c._id.status] = c.n;
+        entry.words += c.words || 0;
+        totals[c._id.status] += c.n;
+        totals.words += c.words || 0;
     });
-    res.render('admin/index', { novels, byNovel });
+    res.render('admin/index', { novels, byNovel, totals });
 }));
 
 router.get('/novels/:slug', wrap(async (req, res) => {
@@ -110,6 +127,7 @@ router.get('/novels/:slug/chapters/:no', wrap(async (req, res) => {
         chapter,
         editorConfig: {
             novel: novel.slug,
+            no: chapter.no,
             title: chapter.title,
             // Lọc ngay khi đưa vào trình soạn thảo, phòng dữ liệu cũ chứa HTML bẩn
             content: renderContent(chapter.content),

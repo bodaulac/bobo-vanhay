@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="android:Theme.DeviceDefault.Light.NoActionBar">
+        <!-- Thanh trạng thái tối cùng tông với app bar; nền tối tránh nháy trắng khi mở app -->
+        <item name="android:statusBarColor">#1B120D</item>
+        <item name="android:navigationBarColor">#FFFDF8</item>
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:colorAccent">#C2410C</item>
+    </style>
+</resources>

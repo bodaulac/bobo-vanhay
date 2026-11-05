@@ -1,6 +1,5 @@
 <%- include('_top', { pageTitle: novel.title + ' – Chương ' + chapter.no, editor: true }) %>
-        <p class="mb-4 text-xs font-bold text-stone-500"><%= novel.title %> · Chương <%= chapter.no %></p>
-        <div id="editor-root"></div>
-        <script id="editor-config" type="application/json"><%- JSON.stringify(editorConfig).replace(/</g, '\\u003c') %></script>
-        <script src="/assets/editor.js" defer></script>
+<div id="editor-root"></div>
+<script id="editor-config" type="application/json"><%- JSON.stringify(editorConfig).replace(/</g, '\\u003c') %></script>
+<script src="/assets/editor.js" defer></script>
 <%- include('_bottom') %>

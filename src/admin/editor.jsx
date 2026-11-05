@@ -1,5 +1,5 @@
-// Trình soạn thảo chương truyện: dùng `novel` (Tiptap) + các nút AI gọi /admin/api/ai.
-import React, { useRef, useState } from 'react';
+// Trình soạn thảo chương truyện: dùng `novel` (Tiptap) + thanh AI nổi, tự lưu nháp.
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
     EditorRoot,
@@ -21,16 +21,22 @@ const extensions = [
 ];
 
 const AI_ACTIONS = [
-    { option: 'continue', label: 'Viết tiếp' },
-    { option: 'improve', label: 'Chau chuốt' },
-    { option: 'shorter', label: 'Rút gọn' },
-    { option: 'longer', label: 'Kéo dài' },
-    { option: 'fix', label: 'Sửa lỗi' }
+    { option: 'continue', label: 'Viết tiếp', icon: 'spark', hot: true },
+    { option: 'improve', label: 'Chau chuốt', icon: 'edit' },
+    { option: 'shorter', label: 'Rút gọn', icon: 'short' },
+    { option: 'longer', label: 'Kéo dài', icon: 'long' },
+    { option: 'fix', label: 'Sửa lỗi', icon: 'fix' }
 ];
 
+const AUTOSAVE_MS = 3000;
 const escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const textToHtml = (text) =>
     text.split(/\n{2,}|\n/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${escapeHtml(p)}</p>`).join('');
+const toast = (text) => { if (window.vhToast) window.vhToast(text); };
+
+const Icon = ({ name, className = '' }) => (
+    <svg className={`ico ${className}`} aria-hidden="true"><use href={`#i-${name}`} /></svg>
+);
 
 async function api(url, method, body) {
     const res = await fetch(url, {
@@ -46,107 +52,152 @@ async function api(url, method, body) {
 
 function App() {
     const editorRef = useRef(null);
+    const timer = useRef(null);
     const [title, setTitle] = useState(cfg.title);
     const [status, setStatus] = useState(cfg.status);
-    const [msg, setMsg] = useState('');
+    const [saveState, setSaveState] = useState('saved'); // saved | dirty | saving | error
+    const [savedAt, setSavedAt] = useState('');
     const [busy, setBusy] = useState(false);
+    const [aiBusy, setAiBusy] = useState('');
+    const [sheet, setSheet] = useState(false);
     const [command, setCommand] = useState('');
     const [words, setWords] = useState(0);
 
-    const flash = (text) => setMsg(text);
+    // refs để autosave luôn đọc giá trị mới nhất
+    const live = useRef({ title, status });
+    live.current = { title, status };
 
-    async function save(nextStatus) {
+    function markDirty() {
+        setSaveState('dirty');
+        clearTimeout(timer.current);
+        // Chỉ tự lưu bản nháp; chương đã đăng phải bấm Lưu để tránh sửa trực tiếp bài đang hiển thị
+        if (live.current.status === 'draft') timer.current = setTimeout(() => save(undefined, true), AUTOSAVE_MS);
+    }
+
+    async function save(nextStatus, silent) {
         const editor = editorRef.current;
         if (!editor) return;
-        setBusy(true);
+        clearTimeout(timer.current);
+        setSaveState('saving');
+        if (!silent) setBusy(true);
         try {
             const data = await api(cfg.saveUrl, 'PUT', {
-                title,
+                title: live.current.title,
                 content: editor.getHTML(),
-                status: nextStatus || status
+                status: nextStatus || live.current.status
             });
             setStatus(data.status);
-            flash(`Đã lưu (${data.wordCount} từ)`);
+            setSaveState('saved');
+            setSavedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+            if (!silent) toast(nextStatus === 'published' ? 'Đã đăng chương' : nextStatus === 'draft' ? 'Đã gỡ về nháp' : `Đã lưu · ${data.wordCount} từ`);
         } catch (err) {
-            flash(err.message);
+            setSaveState('error');
+            toast(err.message);
         } finally {
             setBusy(false);
         }
     }
 
+    useEffect(() => {
+        const onKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+        };
+        const onLeave = (e) => { if (saveState === 'dirty' || saveState === 'saving') { e.preventDefault(); e.returnValue = ''; } };
+        window.addEventListener('keydown', onKey);
+        window.addEventListener('beforeunload', onLeave);
+        return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onLeave); };
+    });
+
     async function runAI(option, customCommand) {
         const editor = editorRef.current;
-        if (!editor) return;
+        if (!editor || aiBusy) return;
         const { from, to, empty } = editor.state.selection;
         let text = empty ? '' : editor.state.doc.textBetween(from, to, '\n\n');
         if (option === 'continue' && !text) {
             // Không bôi đen: lấy phần văn bản trước con trỏ làm ngữ cảnh.
             text = editor.state.doc.textBetween(0, from, '\n\n').slice(-3000);
         }
-        if (!text.trim()) return flash('Hãy bôi đen đoạn văn cần xử lý (hoặc đặt con trỏ sau đoạn muốn viết tiếp).');
-        setBusy(true);
-        flash('AI đang viết...');
+        if (!text.trim()) return toast(option === 'continue' ? 'Hãy viết vài câu trước rồi nhờ AI viết tiếp.' : 'Hãy bôi đen đoạn văn cần xử lý.');
+        setAiBusy(option);
         try {
-            const data = await api('/admin/api/ai', 'POST', {
-                option, text, command: customCommand, novel: cfg.novel
-            });
+            const data = await api('/admin/api/ai', 'POST', { option, text, command: customCommand, novel: cfg.novel });
             const html = textToHtml(data.text || '');
             if (!html) throw new Error('AI không trả về nội dung.');
             if (option === 'continue') editor.chain().focus().insertContentAt(empty ? from : to, html).run();
             else editor.chain().focus().insertContentAt({ from, to }, html).run();
-            flash('Đã chèn kết quả AI (Ctrl+Z để hoàn tác).');
+            toast('Đã chèn kết quả AI · hoàn tác bằng Ctrl+Z');
+            setSheet(false);
         } catch (err) {
-            flash(err.message);
+            toast(err.message);
         } finally {
-            setBusy(false);
+            setAiBusy('');
         }
     }
 
-    const btn = 'px-3 py-1.5 rounded-full border border-stone-200 text-xs font-bold text-stone-600 hover:text-amber-900 disabled:opacity-50';
+    useEffect(() => { document.body.classList.toggle('sheet-open', sheet); }, [sheet]);
+
+    const stateText = { saved: savedAt ? `Đã lưu ${savedAt}` : 'Đã lưu', dirty: 'Chưa lưu', saving: 'Đang lưu…', error: 'Lỗi khi lưu' }[saveState];
+    const stateClass = { saved: 'chip-ok', dirty: 'chip-draft', saving: 'chip-draft', error: 'chip-draft' }[saveState];
 
     return (
-        <div>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Tiêu đề chương"
-                    className="flex-1 min-w-0 w-full text-2xl font-serif font-bold bg-transparent border-b border-stone-300 outline-none py-1" />
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">{status === 'published' ? 'Đã đăng' : 'Bản nháp'}</span>
-            </div>
-
-            <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-white/95 border border-stone-200 rounded-2xl p-3 mb-4">
-                {AI_ACTIONS.map((a) => (
-                    <button key={a.option} type="button" disabled={busy} className={btn} onClick={() => runAI(a.option)}>✨ {a.label}</button>
-                ))}
-                <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="Yêu cầu riêng cho đoạn bôi đen..."
-                    aria-label="Yêu cầu riêng cho AI" className="grow basis-full sm:basis-0 min-w-0 text-sm bg-stone-100 rounded-full px-4 py-1.5 outline-none" />
-                <button type="button" disabled={busy || !command.trim()} className={btn} onClick={() => runAI('zap', command)}>Thực hiện</button>
-            </div>
-
-            <EditorRoot>
-                <EditorContent
-                    extensions={extensions}
-                    injectCSS={false}
-                    initialContent={undefined}
-                    className="bg-white border border-stone-200 rounded-3xl p-4 md:p-8 min-h-[20rem]"
-                    editorProps={{ attributes: { class: 'work-content focus:outline-none max-w-none' } }}
-                    onCreate={({ editor }) => {
-                        editorRef.current = editor;
-                        editor.commands.setContent(cfg.content || '');
-                        setWords(editor.storage.characterCount.words());
-                    }}
-                    onUpdate={({ editor }) => setWords(editor.storage.characterCount.words())}
-                />
-            </EditorRoot>
-
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-                <button type="button" disabled={busy} className={btn} onClick={() => save()}>Lưu</button>
+        <>
+            <header className="adm-bar">
+                <a href={cfg.backUrl} className="icon-btn" aria-label="Về danh sách chương"><Icon name="back" /></a>
+                <h1>Chương {cfg.no}</h1>
+                <button type="button" className="icon-btn" disabled={busy} onClick={() => save()} aria-label="Lưu"><Icon name="save" /></button>
                 {status === 'published'
-                    ? <button type="button" disabled={busy} className={btn} onClick={() => save('draft')}>Gỡ xuống (nháp)</button>
-                    : <button type="button" disabled={busy} className={btn} onClick={() => save('published')}>Lưu &amp; đăng</button>}
-                <a href={cfg.backUrl} className="text-xs font-bold text-stone-500 underline">← Về danh sách chương</a>
-                <span className="text-xs text-stone-400 ml-auto">{words} từ</span>
-                <span role="status" className="text-xs font-bold text-amber-900">{msg}</span>
+                    ? <button type="button" className="btn btn-gold" disabled={busy} onClick={() => save('draft')}>Gỡ</button>
+                    : <button type="button" className="btn btn-gold" disabled={busy} onClick={() => save('published')}><Icon name="send" />Đăng</button>}
+            </header>
+
+            <main className="adm-wrap">
+                <input className="ed-title" value={title} aria-label="Tiêu đề chương" placeholder="Tiêu đề chương"
+                    onChange={(e) => { setTitle(e.target.value); live.current.title = e.target.value; markDirty(); }} />
+                <div className="ed-meta">
+                    <span className={`chip chip-dot ${status === 'published' ? 'chip-ok' : 'chip-draft'}`}>{status === 'published' ? 'Đã đăng' : 'Nháp'}</span>
+                    <span className={`chip ${stateClass}`}>{stateText}</span>
+                    <span>{words.toLocaleString('vi-VN')} từ</span>
+                </div>
+
+                <EditorRoot>
+                    <EditorContent
+                        extensions={extensions}
+                        injectCSS={false}
+                        className="paper"
+                        editorProps={{ attributes: { class: 'work-content focus:outline-none max-w-none' } }}
+                        onCreate={({ editor }) => {
+                            editorRef.current = editor;
+                            editor.commands.setContent(cfg.content || '');
+                            setWords(editor.storage.characterCount.words());
+                            setSaveState('saved');
+                        }}
+                        onUpdate={({ editor }) => { setWords(editor.storage.characterCount.words()); markDirty(); }}
+                    />
+                </EditorRoot>
+            </main>
+
+            <div className="dock" role="toolbar" aria-label="Công cụ AI">
+                <div className="dock-row">
+                    {AI_ACTIONS.map((a) => (
+                        <button key={a.option} type="button" disabled={!!aiBusy} className={`ai-chip ${a.hot ? 'hot' : ''}`} onClick={() => runAI(a.option)}>
+                            <Icon name={aiBusy === a.option ? 'loader' : a.icon} className={aiBusy === a.option ? 'spin' : ''} />{a.label}
+                        </button>
+                    ))}
+                    <button type="button" disabled={!!aiBusy} className="ai-chip" onClick={() => setSheet(true)}><Icon name="spark" />Yêu cầu riêng</button>
+                </div>
             </div>
-        </div>
+
+            <div className="backdrop" onClick={() => setSheet(false)} />
+            <div className={`sheet ${sheet ? 'open' : ''}`} role="dialog" aria-label="Yêu cầu riêng cho AI">
+                <h3>Yêu cầu riêng cho AI</h3>
+                <p className="label msg">Bôi đen một đoạn rồi mô tả điều bạn muốn</p>
+                <textarea className="field" rows={4} maxLength={300} value={command} onChange={(e) => setCommand(e.target.value)}
+                    placeholder="Ví dụ: viết lại bi thương hơn, thêm đối thoại giữa Tấm và hoàng thượng" />
+                <button type="button" className="btn btn-primary btn-block mt-form" disabled={!!aiBusy || !command.trim()} onClick={() => runAI('zap', command)}>
+                    <Icon name="spark" />Thực hiện
+                </button>
+            </div>
+        </>
     );
 }
 
