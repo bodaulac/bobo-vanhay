@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { font-family: 'Inter', sans-serif; background-color: #fbfaf8; }
+.font-serif { font-family: 'Playfair Display', serif; }
+
+/* Nội dung bài viết */
+.work-content p { margin-bottom: 1.5rem; line-height: 1.9; color: #374151; font-size: calc(1.125rem * var(--rs, 1)); }
+.work-content h2 { font-family: 'Playfair Display', serif; font-size: 1.875rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1.25rem; color: #431407; line-height: 1.3; }
+.work-content h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; color: #78350f; }
+.work-content strong { color: #111827; font-weight: 700; }
+.work-content img { max-width: 100%; height: auto; border-radius: 1rem; margin: 1.5rem auto; }
+.work-content a { color: #78350f; text-decoration: underline; }
+
+/* Chế độ đọc: cỡ chữ và nền tối (chỉ áp dụng cho khung bài viết) */
+#reader[data-size="0"] { --rs: 0.9; }
+#reader[data-size="2"] { --rs: 1.2; }
+#reader[data-size="3"] { --rs: 1.4; }
+#reader[data-theme="dark"] { background-color: #1c1917; border-color: #44403c; color: #e7e5e4; }
+#reader[data-theme="dark"] h1,
+#reader[data-theme="dark"] h4,
+#reader[data-theme="dark"] .work-content strong,
+#reader[data-theme="dark"] .work-content h2,
+#reader[data-theme="dark"] .work-content h3 { color: #f5f5f4; }
+#reader[data-theme="dark"] .work-content p { color: #d6d3d1; }
+#reader[data-theme="dark"] .work-content a { color: #fcd34d; }

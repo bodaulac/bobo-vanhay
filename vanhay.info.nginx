@@ -8,8 +8,8 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     
-    # Enhanced CSP to allow Tailwind, Cloudflare Insights, and Google Fonts
-    add_header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://static.cloudflareinsights.com https://f005.backblazeb2.com;" always;
+    # CSP chặt: CSS/JS tự host (Tailwind build sẵn), không còn unsafe-inline/unsafe-eval
+    add_header Content-Security-Policy "default-src 'self' https:; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://static.cloudflareinsights.com https://f005.backblazeb2.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self';" always;
 
     # Logging
     access_log /var/log/nginx/vanhay.info.access.log;

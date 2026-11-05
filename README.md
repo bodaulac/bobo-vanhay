@@ -24,6 +24,13 @@ Hệ thống văn học Việt Nam với AI enhancement và crawler tự động
 - **AI-enhanced content** storage
 - **Image URL management**
 
+### 🔎 SEO & trải nghiệm đọc
+- Meta description, canonical, Open Graph, JSON-LD (WebSite, Article, BreadcrumbList)
+- `/sitemap.xml` (cache 1 giờ) và `/robots.txt` sinh động theo `SITE_URL`
+- Tìm kiếm toàn văn `/tim-kiem?q=...` (MongoDB text index, không index trang kết quả)
+- Chế độ đọc: chỉnh cỡ chữ, nền tối (lưu trong trình duyệt)
+- Nội dung bài viết được lọc HTML (sanitize) trước khi hiển thị
+
 ### 🌐 Web Interface
 - **Express.js server** trên port 3004
 - **EJS templates** cho frontend
@@ -71,6 +78,9 @@ docker run -d --name xs-mongo \
 
 # Initialize replica set
 docker exec -it xs-mongo mongosh --eval "rs.initiate()"
+
+# Build CSS (Tailwind) - file public/css/app.css đã commit sẵn, chỉ cần build lại khi sửa giao diện
+npm run build:css
 
 # Start the application
 npm start
@@ -129,6 +139,7 @@ B2_APPLICATION_KEY_ID=your_b2_key_id
 B2_APPLICATION_KEY=your_b2_key
 B2_BUCKET_NAME=your_bucket_name
 PORT=3004
+SITE_URL=https://vanhay.info
 PAGE_SIZE=12
 ```
 

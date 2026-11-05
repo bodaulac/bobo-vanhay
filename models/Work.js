@@ -27,5 +27,10 @@ const WorkSchema = new mongoose.Schema({
 WorkSchema.index({ createdAt: -1 });
 WorkSchema.index({ category: 1, createdAt: -1 });
 WorkSchema.index({ views: -1 });
+// Tìm kiếm toàn văn; 'none' để không áp dụng stemming tiếng Anh cho tiếng Việt
+WorkSchema.index(
+    { title: 'text', tags: 'text', excerpt: 'text' },
+    { name: 'work_text', weights: { title: 10, tags: 5, excerpt: 2 }, default_language: 'none' }
+);
 
 module.exports = mongoose.models.Work || mongoose.model('Work', WorkSchema);

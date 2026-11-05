@@ -1,13 +1,17 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const compression = require('compression');
+const sanitizeHtml = require('sanitize-html');
 const path = require('path');
 const config = require('./config');
 const Work = require('./models/Work');
+const seo = require('./src/lib/seo');
 
 const app = express();
 const PORT = config.port;
 const BOT_UA = /bot|crawl|spider|slurp|facebookexternalhit|preview/i;
+const SITEMAP_TTL_MS = 60 * 60 * 1000;
+const SITEMAP_MAX_URLS = 50000;
 
 // Improved MongoDB connection with retry logic
 async function connectMongoDB() {
@@ -66,7 +70,7 @@ app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(compression());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d' }));
 app.use(express.json());
 
 // Consistent Navigation Menu
@@ -88,6 +92,39 @@ function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Nội dung do crawler/AI sinh ra được lưu dạng HTML: lọc trước khi hiển thị
+const CONTENT_SANITIZE = {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'img', 'figure', 'figcaption', 'u']),
+    allowedAttributes: { a: ['href', 'title'], img: ['src', 'alt', 'title'] },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    transformTags: {
+        a: sanitizeHtml.simpleTransform('a', { rel: 'nofollow noopener noreferrer', target: '_blank' })
+    }
+};
+
+function menuItemForCategory(category) {
+    if (!category) return undefined;
+    const c = category.toLowerCase();
+    return NAV_MENU.find((m) => {
+        const full = m.name.toLowerCase();
+        return c.includes(full) || c.includes(full.replace('truyện ', ''));
+    });
+}
+
+function sourceInfo(sourceUrl) {
+    try {
+        const u = new URL(sourceUrl);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+        return { url: u.href, host: u.hostname.replace(/^www\./, '') };
+    } catch (err) {
+        return null;
+    }
+}
+
+function parsePage(value) {
+    return Math.max(1, Math.min(parseInt(value, 10) || 1, 10000));
+}
+
 // Routes
 app.get('/', async (req, res) => {
     try {
@@ -96,7 +133,73 @@ app.get('/', async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(12)
             .lean();
-        res.render('index', { latestWorks, menu: NAV_MENU });
+        res.render('index', { latestWorks, menu: NAV_MENU, seo: seo.homeSeo() });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
+});
+
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send(seo.robotsTxt());
+});
+
+let sitemapCache = { xml: null, at: 0 };
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        if (!sitemapCache.xml || Date.now() - sitemapCache.at > SITEMAP_TTL_MS) {
+            const works = await Work.find({ slug: { $exists: true, $ne: '' } })
+                .select('slug updatedAt')
+                .sort({ createdAt: -1 })
+                .limit(SITEMAP_MAX_URLS - NAV_MENU.length - 1)
+                .lean();
+            const entries = [{ path: '/' }]
+                .concat(NAV_MENU.map((m) => ({ path: m.href })))
+                .concat(works.map((w) => ({ path: '/' + w.slug, lastmod: w.updatedAt })));
+            sitemapCache = { xml: seo.buildSitemap(entries), at: Date.now() };
+        }
+        res.type('application/xml').send(sitemapCache.xml);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
+});
+
+app.get('/tim-kiem', async (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 100);
+    const page = parsePage(req.query.page);
+    const render = (works, total) => {
+        const totalPages = Math.max(1, Math.ceil(total / config.pageSize));
+        res.render('category', {
+            title: q ? `Kết quả cho “${q}”` : 'Tìm kiếm',
+            subtitle: q ? `Tìm thấy ${total} truyện phù hợp.` : 'Nhập từ khoá để tìm truyện.',
+            emptyMessage: q ? 'Không tìm thấy truyện nào phù hợp. Hãy thử từ khoá khác.' : 'Hãy nhập từ khoá vào ô tìm kiếm.',
+            works,
+            query: q,
+            menu: NAV_MENU,
+            seo: seo.searchSeo(q),
+            pagination: {
+                page,
+                totalPages,
+                url: (n) => `/tim-kiem?q=${encodeURIComponent(q)}&page=${n}`
+            }
+        });
+    };
+
+    if (!q) return render([], 0);
+
+    try {
+        const filter = { $text: { $search: q } };
+        const [works, total] = await Promise.all([
+            Work.find(filter, { score: { $meta: 'textScore' } })
+                .select(LIST_FIELDS)
+                .sort({ score: { $meta: 'textScore' } })
+                .skip((page - 1) * config.pageSize)
+                .limit(config.pageSize)
+                .lean(),
+            Work.countDocuments(filter)
+        ]);
+        render(works, total);
     } catch (error) {
         console.error(error);
         res.status(500).send('Server Error');
@@ -111,7 +214,7 @@ app.get('/:slug', async (req, res, next) => {
     const menuItem = NAV_MENU.find(m => m.href === '/' + slug);
     if (menuItem) {
         try {
-            const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+            const page = parsePage(req.query.page);
             const filter = {
                 $or: [
                     { category: new RegExp(escapeRegex(menuItem.name.replace('Truyện ', '')), 'i') },
@@ -132,7 +235,12 @@ app.get('/:slug', async (req, res, next) => {
                 title: menuItem.name,
                 works,
                 menu: NAV_MENU,
-                pagination: { page, totalPages, basePath: menuItem.href }
+                seo: seo.categorySeo(menuItem, page, totalPages),
+                pagination: {
+                    page,
+                    totalPages,
+                    url: (n) => menuItem.href + (n > 1 ? `?page=${n}` : '')
+                }
             });
         } catch (err) {
             console.error(err);
@@ -153,7 +261,14 @@ app.get('/:slug', async (req, res, next) => {
             .select(LIST_FIELDS)
             .limit(4)
             .lean();
-        res.render('detail', { work, related, menu: NAV_MENU });
+        res.render('detail', {
+            work,
+            related,
+            menu: NAV_MENU,
+            contentHtml: sanitizeHtml(work.content || '', CONTENT_SANITIZE),
+            source: sourceInfo(work.sourceUrl),
+            seo: seo.workSeo(work, menuItemForCategory(work.category))
+        });
     } catch (error) {
         console.error(error);
         res.status(500).send('Server Error');
@@ -166,6 +281,7 @@ app.use((req, res) => {
         title: '404 - Không tìm thấy',
         works: [],
         menu: NAV_MENU,
+        seo: seo.notFoundSeo(),
         pagination: null
     });
 });

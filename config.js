@@ -15,6 +15,8 @@ const b2Key = process.env.B2_APPLICATION_KEY || '';
 
 module.exports = {
     port: Number(process.env.PORT) || 3004,
+    siteUrl: (process.env.SITE_URL || 'https://vanhay.info').replace(/\/+$/, ''),
+    siteName: 'Văn Hay',
     get mongodbUri() { return required('MONGODB_URI'); },
     aiProxy: {
         url: process.env.AI_PROXY_URL || 'http://127.0.0.1:9090/v1/chat/completions',
