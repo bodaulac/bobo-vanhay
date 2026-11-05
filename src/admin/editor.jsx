@@ -117,7 +117,7 @@ function App() {
                     <button key={a.option} type="button" disabled={busy} className={btn} onClick={() => runAI(a.option)}>✨ {a.label}</button>
                 ))}
                 <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="Yêu cầu riêng cho đoạn bôi đen..."
-                    aria-label="Yêu cầu riêng cho AI" className="flex-1 min-w-0 w-full sm:w-auto text-sm bg-stone-100 rounded-full px-4 py-1.5 outline-none" />
+                    aria-label="Yêu cầu riêng cho AI" className="grow basis-full sm:basis-0 min-w-0 text-sm bg-stone-100 rounded-full px-4 py-1.5 outline-none" />
                 <button type="button" disabled={busy || !command.trim()} className={btn} onClick={() => runAI('zap', command)}>Thực hiện</button>
             </div>
 
