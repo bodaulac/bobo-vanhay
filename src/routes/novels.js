@@ -60,6 +60,7 @@ module.exports = function novelsRouter(menu) {
             prev,
             next: nextCh,
             contentHtml: renderContent(chapter.content),
+            readMin: Math.max(1, Math.round((chapter.wordCount || 0) / 220)),
             menu,
             seo: seo.chapterSeo(novel, chapter)
         });

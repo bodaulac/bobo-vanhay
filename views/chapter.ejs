@@ -1,28 +1,30 @@
 <%- include('partials/head') %>
+<div class="read-progress" aria-hidden="true"><i id="read-bar"></i></div>
 <%- include('partials/nav') %>
 
-    <main class="max-w-3xl mx-auto px-4 py-12">
-        <nav aria-label="Đường dẫn" class="text-xs font-bold text-stone-400 mb-6">
-            <a href="/sach" class="underline">Truyện dài</a> › <a href="/sach/<%= novel.slug %>" class="underline"><%= novel.title %></a>
-        </nav>
-        <article id="reader" data-size="1" data-theme="light" class="bg-white rounded-[3rem] border border-stone-200 shadow-sm p-8 md:p-14">
-            <header class="mb-10 text-center">
-                <p class="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">Chương <%= chapter.no %></p>
-                <h1 class="text-3xl md:text-4xl font-serif font-bold text-stone-900 leading-tight"><%= chapter.title %></h1>
-                <div class="flex items-center justify-center gap-2 mt-5 text-sm font-bold" role="group" aria-label="Tuỳ chỉnh đọc">
-                    <button type="button" id="reader-smaller" aria-label="Giảm cỡ chữ" class="px-3 py-1 rounded-full border border-stone-200 text-stone-500 hover:text-amber-900">A−</button>
-                    <button type="button" id="reader-larger" aria-label="Tăng cỡ chữ" class="px-3 py-1 rounded-full border border-stone-200 text-stone-500 hover:text-amber-900">A+</button>
-                    <button type="button" id="reader-theme" aria-pressed="false" aria-label="Bật/tắt nền tối" class="px-3 py-1 rounded-full border border-stone-200 text-stone-500 hover:text-amber-900">🌙</button>
-                </div>
-            </header>
-            <div class="work-content max-w-none"><%- contentHtml %></div>
-        </article>
+<main class="read-wrap" id="reader" data-size="1">
+    <nav class="crumbs" aria-label="Đường dẫn">
+        <a href="/sach">Truyện dài</a><span>›</span><a href="/sach/<%= novel.slug %>"><%= novel.title %></a>
+    </nav>
 
-        <nav class="flex items-center justify-between gap-4 mt-8 text-sm font-bold" aria-label="Chuyển chương">
-            <% if (prev) { %><a href="/sach/<%= novel.slug %>/chuong-<%= prev.no %>" rel="prev" class="px-5 py-2 rounded-full bg-white border border-stone-200 no-underline">← Chương <%= prev.no %></a><% } else { %><span></span><% } %>
-            <a href="/sach/<%= novel.slug %>" class="text-stone-500 underline">Mục lục</a>
-            <% if (next) { %><a href="/sach/<%= novel.slug %>/chuong-<%= next.no %>" rel="next" class="px-5 py-2 rounded-full bg-white border border-stone-200 no-underline">Chương <%= next.no %> →</a><% } else { %><span></span><% } %>
-        </nav>
-    </main>
+    <article>
+        <header class="read-head">
+            <span class="chip chip-brand">Chương <%= chapter.no %></span>
+            <h1 class="read-title"><%= chapter.title %></h1>
+            <div class="read-meta">
+                <span><%- ico('clock') %><%= readMin %> phút đọc</span>
+                <span><%- ico('book') %><%= chapter.wordCount %> từ</span>
+            </div>
+        </header>
+        <div class="orn" aria-hidden="true"><%- ico('spark') %></div>
+        <div class="work-content dropcap"><%- contentHtml %></div>
+    </article>
 
+    <nav class="chap-nav" aria-label="Chuyển chương">
+        <% if (prev) { %><a href="/sach/<%= novel.slug %>/chuong-<%= prev.no %>" rel="prev"><small>← Chương trước</small><b><%= prev.title %></b></a><% } %>
+        <% if (next) { %><a href="/sach/<%= novel.slug %>/chuong-<%= next.no %>" rel="next" class="next <%= prev ? '' : 'solo' %>"><small>Chương sau →</small><b><%= next.title %></b></a><% } %>
+    </nav>
+</main>
+
+<%- include('partials/dock', { showNav: true, prevUrl: prev ? '/sach/' + novel.slug + '/chuong-' + prev.no : null, nextUrl: next ? '/sach/' + novel.slug + '/chuong-' + next.no : null, toc: '/sach/' + novel.slug }) %>
 <%- include('partials/footer') %>

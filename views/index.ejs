@@ -1,60 +1,53 @@
 <%- include('partials/head') %>
 <%- include('partials/nav') %>
 
-    <main class="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 lg:grid-cols-4 gap-10">
-        <!-- Sidebar Menu -->
-        <aside class="hidden lg:block space-y-2">
-            <h2 class="text-xs font-black text-stone-400 uppercase tracking-[0.2em] mb-6">Chuyên mục chính</h2>
-            <% menu.forEach(item => { %>
-                <a href="<%= item.href %>" class="flex items-center gap-3 p-4 rounded-2xl hover:bg-amber-50 hover:text-amber-900 font-bold transition-all text-stone-600">
-                    <span class="text-xl"><%= item.icon %></span>
-                    <%= item.name %>
+<section class="pub-hero">
+    <div class="hero-art" aria-hidden="true"><i class="cover cover-0"><span class="serif">V</span></i><i class="cover cover-4"><span class="serif">H</span></i><i class="cover cover-6"><span class="serif">✦</span></i></div>
+    <div class="pub-hero-in">
+        <span class="eyebrow">Tinh hoa chữ Việt</span>
+        <h1>Thế giới cổ tích trong tầm tay bạn</h1>
+        <p>Khám phá kho tàng truyện dân gian Việt Nam và thế giới, cùng những bộ truyện dài mới — được biên tập bằng trí tuệ nhân tạo.</p>
+        <form class="hero-search" action="/tim-kiem" method="get" role="search">
+            <input type="search" name="q" maxlength="100" required placeholder="Tìm Tấm Cám, Thạch Sanh..." aria-label="Tìm kiếm truyện">
+            <button>Tìm</button>
+        </form>
+    </div>
+</section>
+
+<main class="wrap">
+    <% if (latestNovels && latestNovels.length) { %>
+    <section class="sec">
+        <div class="sec-head"><h2>Truyện dài mới</h2><a href="/sach">Xem tất cả ➔</a></div>
+        <div class="shelf">
+            <% latestNovels.forEach(n => { %>
+                <a href="/sach/<%= n.slug %>" class="book">
+                    <div class="cover <%= cover(n.slug) %>"><span class="serif"><%= initial(n.title) %></span></div>
+                    <h3><%= n.title %></h3>
+                    <small><%= n.totalChapters %> chương</small>
                 </a>
             <% }) %>
-        </aside>
-
-        <!-- Main Content -->
-        <div class="lg:col-span-3">
-            <section class="mb-16">
-                <div class="bg-amber-900 rounded-[3rem] p-12 text-white relative overflow-hidden shadow-2xl">
-                    <div class="relative z-10">
-                        <span class="text-amber-300 font-black text-[10px] tracking-[0.3em] uppercase">Chào mừng tới Văn Hay</span>
-                        <h1 class="text-5xl font-serif font-bold mt-4 mb-6">Thế giới cổ tích <br> trong tầm tay bạn.</h1>
-                        <p class="text-amber-100/70 text-lg max-w-md mb-8">Khám phá kho tàng truyện dân gian Việt Nam và Thế giới được biên tập bởi Trí tuệ nhân tạo.</p>
-                        <button class="bg-white text-amber-900 px-8 py-4 rounded-full font-bold shadow-lg">Khám phá ngay</button>
-                    </div>
-                    <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
-                </div>
-            </section>
-
-            <h2 class="text-3xl font-serif font-bold mb-10 text-stone-900">Mới cập nhật</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                <% latestWorks.forEach(work => { %>
-                    <a href="/<%= work.slug %>" class="group bg-white rounded-3xl border border-stone-200 overflow-hidden hover:shadow-2xl transition-all no-underline flex flex-col">
-                        <div class="aspect-[4/3] w-full overflow-hidden bg-stone-100 relative">
-                            <% if (work.thumbnail) { %>
-                                <img src="<%= work.thumbnail %>" alt="<%= work.title %>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                            <% } else { %>
-                                <div class="w-full h-full flex items-center justify-center text-stone-300 text-6xl font-serif">V</div>
-                            <% } %>
-                            <div class="absolute top-4 left-4">
-                                <span class="px-4 py-1 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black text-amber-900 shadow-sm border border-stone-100 uppercase tracking-tighter">
-                                    <%= work.category %>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="p-6 flex-1 flex flex-col">
-                            <h3 class="text-xl font-serif font-bold mb-3 text-stone-800 line-clamp-2 group-hover:text-amber-900 transition-colors leading-snug"><%= work.title %></h3>
-                            <p class="text-stone-400 text-xs mb-6 flex-1 line-clamp-3"><%= work.excerpt %></p>
-                            <div class="flex items-center justify-between mt-auto pt-4 border-t border-stone-50">
-                                <span class="text-[10px] font-bold text-stone-400">— <%= work.author %></span>
-                                <span class="text-amber-900 font-black text-xs">Đọc ➔</span>
-                            </div>
-                        </div>
-                    </a>
-                <% }) %>
-            </div>
         </div>
-    </main>
+    </section>
+    <% } %>
+
+    <section class="sec">
+        <div class="sec-head"><h2>Mới cập nhật</h2></div>
+        <div class="grid-cards">
+            <% latestWorks.forEach(work => { %><%- include('partials/card', { work }) %><% }) %>
+            <% if (latestWorks.length === 0) { %>
+                <div class="empty-state"><%- ico('book') %><p>Robot đang nạp truyện, bạn quay lại sau nhé.</p></div>
+            <% } %>
+        </div>
+    </section>
+
+    <section class="sec">
+        <div class="sec-head"><h2>Chuyên mục</h2></div>
+        <div class="tiles">
+            <% menu.forEach(item => { %>
+                <a href="<%= item.href %>" class="tile"><i><%= item.icon %></i><%= item.name %></a>
+            <% }) %>
+        </div>
+    </section>
+</main>
 
 <%- include('partials/footer') %>

@@ -68,12 +68,23 @@ mongoose.connection.on('reconnected', () => {
     console.log('🔄 MongoDB reconnected');
 });
 
+// Hàm hỗ trợ dùng trong view
+app.locals.ico = (name, extra) => `<svg class="ico ${extra || ''}"><use href="#i-${name}"/></svg>`;
+app.locals.cover = (slug) => {
+    let h = 0;
+    for (const c of String(slug)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return 'cover-' + (h % 8);
+};
+app.locals.initial = (title) => (String(title).trim()[0] || 'V').toUpperCase();
+const readingMinutes = (html) => Math.max(1, Math.round(seo.stripHtml(html).split(/\s+/).filter(Boolean).length / 220));
+
 // Middleware
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(compression());
+app.use((req, res, next) => { res.locals.currentPath = req.path; next(); });
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d' }));
 
 // Consistent Navigation Menu
@@ -130,7 +141,9 @@ app.get('/', async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(12)
             .lean();
-        res.render('index', { latestWorks, menu: NAV_MENU, seo: seo.homeSeo() });
+        const latestNovels = await Novel.find({ status: 'published' })
+            .select('title slug totalChapters').sort({ updatedAt: -1 }).limit(10).lean();
+        res.render('index', { latestWorks, latestNovels, menu: NAV_MENU, seo: seo.homeSeo() });
     } catch (error) {
         console.error(error);
         res.status(500).send('Server Error');
@@ -271,6 +284,7 @@ app.get('/:slug', async (req, res, next) => {
             related,
             menu: NAV_MENU,
             contentHtml: renderContent(work.content),
+            readMin: readingMinutes(work.content),
             source: sourceInfo(work.sourceUrl),
             seo: seo.workSeo(work, menuItemForCategory(work.category))
         });

@@ -1,24 +1,31 @@
 <%- include('partials/head') %>
 <%- include('partials/nav') %>
 
-    <main class="max-w-7xl mx-auto px-4 py-12">
-        <h1 class="text-4xl font-serif font-bold text-stone-900 mb-2">Truyện dài</h1>
-        <p class="text-stone-500 mb-12">Những bộ truyện nhiều chương, cập nhật thường xuyên.</p>
-        <% if (novels.length === 0) { %>
-            <p class="text-stone-500">Chưa có truyện nào được đăng.</p>
-        <% } %>
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-            <% novels.forEach(n => { %>
-                <a href="/sach/<%= n.slug %>" class="group bg-white rounded-3xl border border-stone-200 p-8 hover:shadow-2xl transition-all no-underline flex flex-col">
-                    <h2 class="text-2xl font-serif font-bold mb-3 text-stone-800 group-hover:text-amber-900"><%= n.title %></h2>
-                    <p class="text-stone-500 text-sm line-clamp-3 flex-1"><%= n.synopsis %></p>
-                    <div class="flex items-center justify-between mt-6 pt-4 border-t border-stone-50 text-xs font-bold text-stone-400">
-                        <span>— <%= n.author %></span>
-                        <span class="text-amber-900"><%= n.totalChapters %> chương ➔</span>
-                    </div>
-                </a>
-            <% }) %>
-        </div>
-    </main>
+<section class="page-head">
+    <div class="page-head-in">
+        <div class="badge">📖</div>
+        <div><h1>Truyện dài</h1><p>Những bộ truyện nhiều chương, cập nhật thường xuyên.</p></div>
+    </div>
+</section>
+
+<main class="wrap sec">
+    <div class="grid-cards">
+        <% novels.forEach(n => { %>
+            <a href="/sach/<%= n.slug %>" class="story-card">
+                <div class="media">
+                    <% if (n.thumbnail) { %><img src="<%= n.thumbnail %>" alt="<%= n.title %>" loading="lazy" data-fallback>
+                    <% } else { %><div class="cover <%= cover(n.slug) %>"><span class="serif"><%= initial(n.title) %></span></div><% } %>
+                    <span class="chip"><%= n.totalChapters %> chương</span>
+                </div>
+                <div class="body">
+                    <h3><%= n.title %></h3>
+                    <p><%= n.synopsis %></p>
+                    <div class="foot"><span><%= n.author %></span><b>Đọc ➔</b></div>
+                </div>
+            </a>
+        <% }) %>
+        <% if (novels.length === 0) { %><div class="empty-state"><%- ico('book') %><p>Chưa có truyện dài nào được đăng.</p></div><% } %>
+    </div>
+</main>
 
 <%- include('partials/footer') %>

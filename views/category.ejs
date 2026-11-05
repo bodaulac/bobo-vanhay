@@ -1,66 +1,38 @@
 <%- include('partials/head') %>
 <%- include('partials/nav') %>
 
-    <main class="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 lg:grid-cols-4 gap-12">
-        <!-- Sidebar -->
-        <aside class="hidden lg:block space-y-2">
-            <h2 class="text-xs font-black text-stone-400 uppercase tracking-[0.2em] mb-6">Chuyên mục</h2>
-            <% menu.forEach(item => { %>
-                <a href="<%= item.href %>" class="flex items-center gap-3 p-4 rounded-2xl hover:bg-amber-50 hover:text-amber-900 font-bold transition-all text-stone-600 no-underline">
-                    <span class="text-xl opacity-70"><%= item.icon %></span>
-                    <%= item.name %>
-                </a>
-            <% }) %>
-        </aside>
-
-        <!-- Category Content -->
-        <div class="lg:col-span-3">
-            <header class="mb-12">
-                <h1 class="text-4xl font-serif font-bold text-stone-900 mb-2"><%= title %></h1>
-                <p class="text-stone-500"><%= typeof subtitle === 'string' ? subtitle : 'Khám phá tinh hoa văn chương trong chuyên mục ' + title %></p>
-            </header>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                <% if (works && works.length > 0) { %>
-                    <% works.forEach(work => { %>
-                        <a href="/<%= work.slug %>" class="group bg-white rounded-3xl border border-stone-200 overflow-hidden hover:shadow-2xl transition-all no-underline flex flex-col">
-                            <div class="aspect-[4/3] w-full overflow-hidden bg-stone-100 relative">
-                                <% if (work.thumbnail) { %>
-                                    <img src="<%= work.thumbnail %>" alt="<%= work.title %>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                                <% } else { %>
-                                    <div class="w-full h-full flex items-center justify-center text-stone-300 text-6xl font-serif">V</div>
-                                <% } %>
-                            </div>
-                            <div class="p-6 flex-1 flex flex-col">
-                                <h3 class="text-xl font-serif font-bold mb-3 text-stone-800 line-clamp-2 group-hover:text-amber-900 transition-colors leading-snug"><%= work.title %></h3>
-                                <p class="text-stone-400 text-xs mb-6 flex-1 line-clamp-3"><%= work.excerpt %></p>
-                                <div class="flex items-center justify-between mt-auto pt-4 border-t border-stone-50">
-                                    <span class="text-[10px] font-bold text-stone-400">— <%= work.author %></span>
-                                    <span class="text-amber-900 font-black text-xs">Đọc ➔</span>
-                                </div>
-                            </div>
-                        </a>
-                    <% }) %>
-                <% } else { %>
-                    <div class="col-span-full text-center py-20 bg-white rounded-[3rem] border border-dashed border-stone-200">
-                        <p class="text-stone-500"><%= typeof emptyMessage === 'string' ? emptyMessage : 'Robot đang nạp dữ liệu cho chuyên mục này...' %></p>
-                        <div class="mt-10 animate-bounce text-6xl">🤖</div>
-                    </div>
-                <% } %>
-            </div>
-
-            <% if (pagination && pagination.totalPages > 1) { %>
-                <nav class="flex items-center justify-center gap-4 mt-12 text-sm font-bold" aria-label="Phân trang">
-                    <% if (pagination.page > 1) { %>
-                        <a href="<%= pagination.url(pagination.page - 1) %>" rel="prev" class="px-5 py-2 rounded-full bg-white border border-stone-200 text-stone-600 hover:text-amber-900 no-underline">← Trước</a>
-                    <% } %>
-                    <span class="text-stone-400">Trang <%= pagination.page %> / <%= pagination.totalPages %></span>
-                    <% if (pagination.page < pagination.totalPages) { %>
-                        <a href="<%= pagination.url(pagination.page + 1) %>" rel="next" class="px-5 py-2 rounded-full bg-white border border-stone-200 text-stone-600 hover:text-amber-900 no-underline">Sau →</a>
-                    <% } %>
-                </nav>
+<% const item = menu.find(m => m.name === title); const isSearch = typeof query === 'string'; %>
+<section class="page-head">
+    <div class="page-head-in">
+        <div class="badge"><%= isSearch ? '🔎' : (item ? item.icon : '📚') %></div>
+        <div>
+            <h1><%= title %></h1>
+            <p><%= typeof subtitle === 'string' ? subtitle : 'Khám phá tinh hoa văn chương trong chuyên mục ' + title %></p>
+            <% if (isSearch) { %>
+                <form class="big-search" action="/tim-kiem" method="get" role="search">
+                    <input type="search" name="q" maxlength="100" value="<%= query %>" placeholder="Nhập tên truyện hoặc từ khoá..." aria-label="Tìm kiếm truyện">
+                    <button>Tìm</button>
+                </form>
             <% } %>
         </div>
-    </main>
+    </div>
+</section>
+
+<main class="wrap sec">
+    <div class="grid-cards">
+        <% works.forEach(work => { %><%- include('partials/card', { work }) %><% }) %>
+        <% if (!works || works.length === 0) { %>
+            <div class="empty-state"><%- ico('book') %><p><%= typeof emptyMessage === 'string' ? emptyMessage : 'Robot đang nạp dữ liệu cho chuyên mục này...' %></p></div>
+        <% } %>
+    </div>
+
+    <% if (pagination && pagination.totalPages > 1) { %>
+        <nav class="pager" aria-label="Phân trang">
+            <% if (pagination.page > 1) { %><a href="<%= pagination.url(pagination.page - 1) %>" rel="prev">← Trước</a><% } %>
+            <span>Trang <%= pagination.page %> / <%= pagination.totalPages %></span>
+            <% if (pagination.page < pagination.totalPages) { %><a href="<%= pagination.url(pagination.page + 1) %>" rel="next">Sau →</a><% } %>
+        </nav>
+    <% } %>
+</main>
 
 <%- include('partials/footer') %>

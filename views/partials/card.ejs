@@ -1,0 +1,15 @@
+<a href="/<%= work.slug %>" class="story-card">
+    <div class="media">
+        <% if (work.thumbnail) { %>
+            <img src="<%= work.thumbnail %>" alt="<%= work.title %>" loading="lazy" data-fallback>
+        <% } else { %>
+            <div class="cover <%= cover(work.slug) %>"><span class="serif"><%= initial(work.title) %></span></div>
+        <% } %>
+        <% if (work.category) { %><span class="chip"><%= work.category %></span><% } %>
+    </div>
+    <div class="body">
+        <h3><%= work.title %></h3>
+        <p><%= work.excerpt %></p>
+        <div class="foot"><span><%= work.author %></span><b>Đọc ➔</b></div>
+    </div>
+</a>

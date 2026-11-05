@@ -1,19 +1,15 @@
-    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-stone-200 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-            <a href="/" class="flex items-center gap-3 no-underline">
-                <div class="w-12 h-12 bg-[#431407] rounded-full flex items-center justify-center text-white font-serif text-2xl shadow-md">V</div>
-                <span class="text-2xl font-bold font-serif tracking-tight text-stone-900">Văn Hay</span>
-            </a>
-
-            <div class="hidden lg:flex items-center gap-6">
-                <% menu.forEach(item => { %>
-                    <a href="<%= item.href %>" class="text-stone-600 hover:text-amber-900 font-bold text-xs uppercase tracking-wider transition-colors no-underline"><%= item.name %></a>
-                <% }) %>
-            </div>
-
-            <form action="/tim-kiem" method="get" role="search" class="flex items-center bg-stone-100 px-4 py-2 rounded-full border border-stone-200">
-                <span class="mr-2 opacity-50" aria-hidden="true">🔍</span>
-                <input type="search" name="q" maxlength="100" required value="<%= typeof query === 'string' ? query : '' %>" aria-label="Tìm kiếm truyện" placeholder="Tìm kiếm truyện..." class="bg-transparent border-none text-sm outline-none w-32 md:w-48">
-            </form>
-        </div>
+<header class="pub-header">
+    <div class="pub-row">
+        <a href="/" class="brand" aria-label="Văn Hay - Trang chủ"><span class="logo">V</span><span>Văn Hay</span></a>
+        <form action="/tim-kiem" method="get" role="search" class="pub-search">
+            <input type="search" name="q" maxlength="100" required value="<%= typeof query === 'string' ? query : '' %>" aria-label="Tìm kiếm truyện" placeholder="Tìm truyện...">
+            <button aria-label="Tìm"><%- ico('search') %></button>
+        </form>
+        <a href="/tim-kiem" class="search-link cat-pill" aria-label="Tìm kiếm"><%- ico('search') %></a>
+    </div>
+    <nav class="cats" aria-label="Chuyên mục">
+        <% menu.forEach(item => { %>
+            <a href="<%= item.href %>" class="cat-pill" <%- (typeof currentPath === 'string' && currentPath.indexOf(item.href) === 0) ? 'aria-current="page"' : '' %>><%= item.icon %> <%= item.href === '/sach' ? 'Truyện dài' : item.name.replace('Truyện ', '') %></a>
+        <% }) %>
     </nav>
+</header>

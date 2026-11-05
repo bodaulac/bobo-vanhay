@@ -1,0 +1,14 @@
+<div class="read-dock" role="toolbar" aria-label="Tuỳ chỉnh đọc">
+    <% if (showNav) { %>
+        <% if (prevUrl) { %><a class="d" href="<%= prevUrl %>" rel="prev" aria-label="Chương trước"><%- ico('left') %></a><% } else { %><span class="d" aria-disabled="true"><%- ico('left') %></span><% } %>
+    <% } %>
+    <a class="d" href="<%= toc %>" aria-label="Mục lục"><%- ico('list') %></a>
+    <span class="sep"></span>
+    <button type="button" class="d" id="reader-smaller" aria-label="Giảm cỡ chữ">A−</button>
+    <button type="button" class="d" id="reader-larger" aria-label="Tăng cỡ chữ">A+</button>
+    <button type="button" class="d" id="reader-theme" aria-label="Đổi nền đọc: sáng, giấy, tối"><%- ico('moon') %></button>
+    <% if (showNav) { %>
+        <span class="sep"></span>
+        <% if (nextUrl) { %><a class="d" href="<%= nextUrl %>" rel="next" aria-label="Chương sau"><%- ico('right') %></a><% } else { %><span class="d" aria-disabled="true"><%- ico('right') %></span><% } %>
+    <% } %>
+</div>
