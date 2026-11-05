@@ -1,21 +1,29 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const compression = require('compression');
 const path = require('path');
-require('dotenv').config();
+const config = require('./config');
+const Work = require('./models/Work');
+const Novel = require('./models/Novel');
+const Chapter = require('./models/Chapter');
+const adminRouter = require('./src/routes/admin');
+const novelsRouter = require('./src/routes/novels');
+const seo = require('./src/lib/seo');
+const { renderContent } = require('./src/lib/content');
 
 const app = express();
-const PORT = process.env.PORT || 3004;
-
-// Database
-const MONGODB_URI = "mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0";
+const PORT = config.port;
+const BOT_UA = /bot|crawl|spider|slurp|facebookexternalhit|preview/i;
+const SITEMAP_TTL_MS = 60 * 60 * 1000;
+const SITEMAP_MAX_URLS = 50000;
 
 // Improved MongoDB connection with retry logic
 async function connectMongoDB() {
     let retries = 5;
-    
+
     while (retries > 0) {
         try {
-            await mongoose.connect(MONGODB_URI, {
+            await mongoose.connect(config.mongodbUri, {
                 serverSelectionTimeoutMS: 5000,
                 socketTimeoutMS: 45000,
                 maxPoolSize: 10,
@@ -27,17 +35,14 @@ async function connectMongoDB() {
         } catch (err) {
             console.error(`❌ MongoDB Connection Error (${retries} retries left):`, err.message);
             retries--;
-            
+
             if (retries === 0) {
                 console.error('❌ Failed to connect to MongoDB after multiple attempts');
-                console.error('💡 Check:');
-                console.error('   1. MongoDB Docker container is running');
-                console.error('   2. Password is correct: examplepassword');
-                console.error('   3. Network connectivity');
+                console.error('💡 Check MONGODB_URI in .env, that MongoDB is running, and network connectivity');
                 // Don't crash the app, continue without DB
                 return;
             }
-            
+
             // Wait before retry
             await new Promise(resolve => setTimeout(resolve, 5000));
         }
@@ -63,27 +68,24 @@ mongoose.connection.on('reconnected', () => {
     console.log('🔄 MongoDB reconnected');
 });
 
-// Basic Work Model
-const WorkSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    author: { type: String, default: 'Sưu tầm' },
-    content: String,
-    excerpt: String,
-    thumbnail: String,
-    type: String,
-    category: String,
-    tags: [String],
-    slug: { type: String, unique: true },
-    sourceUrl: String,
-    views: { type: Number, default: 0 }
-}, { timestamps: true });
-const Work = mongoose.models.Work || mongoose.model('Work', WorkSchema);
+// Hàm hỗ trợ dùng trong view
+app.locals.ico = (name, extra) => `<svg class="ico ${extra || ''}"><use href="#i-${name}"/></svg>`;
+app.locals.cover = (slug) => {
+    let h = 0;
+    for (const c of String(slug)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return 'cover-' + (h % 8);
+};
+app.locals.initial = (title) => (String(title).trim()[0] || 'V').toUpperCase();
+const readingMinutes = (html) => Math.max(1, Math.round(seo.stripHtml(html).split(/\s+/).filter(Boolean).length / 220));
 
 // Middleware
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+app.use(compression());
+app.use((req, res, next) => { res.locals.currentPath = req.path; next(); });
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d' }));
 
 // Consistent Navigation Menu
 const NAV_MENU = [
@@ -94,15 +96,130 @@ const NAV_MENU = [
     { name: 'Truyện Cười', href: '/truyen-cuoi', icon: '😆' },
     { name: 'Truyện Thiếu Nhi', href: '/truyen-thieu-nhi', icon: '🎈' },
     { name: 'Quà Tặng Cuộc Sống', href: '/qua-tang-cuoc-song', icon: '🎁' },
-    { name: 'Thơ Cho Bé', href: '/tho-cho-be', icon: '📜' }
+    { name: 'Thơ Cho Bé', href: '/tho-cho-be', icon: '📜' },
+    { name: 'Truyện Dài', href: '/sach', icon: '📖' }
 ];
+
+app.use('/admin', adminRouter);
+app.use('/sach', novelsRouter(NAV_MENU));
+
+// Chỉ lấy các trường cần cho thẻ danh sách (không tải `content`)
+const LIST_FIELDS = 'title slug excerpt thumbnail author category createdAt';
+
+function escapeRegex(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function menuItemForCategory(category) {
+    if (!category) return undefined;
+    const c = category.toLowerCase();
+    return NAV_MENU.find((m) => {
+        const full = m.name.toLowerCase();
+        return c.includes(full) || c.includes(full.replace('truyện ', ''));
+    });
+}
+
+function sourceInfo(sourceUrl) {
+    try {
+        const u = new URL(sourceUrl);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+        return { url: u.href, host: u.hostname.replace(/^www\./, '') };
+    } catch (err) {
+        return null;
+    }
+}
+
+function parsePage(value) {
+    return Math.max(1, Math.min(parseInt(value, 10) || 1, 10000));
+}
 
 // Routes
 app.get('/', async (req, res) => {
     try {
-        const latestWorks = await Work.find({ title: { $exists: true } }).sort({ createdAt: -1 }).limit(12);
-        res.render('index', { latestWorks, menu: NAV_MENU });
+        const latestWorks = await Work.find({ title: { $exists: true } })
+            .select(LIST_FIELDS)
+            .sort({ createdAt: -1 })
+            .limit(12)
+            .lean();
+        const latestNovels = await Novel.find({ status: 'published' })
+            .select('title slug totalChapters').sort({ updatedAt: -1 }).limit(10).lean();
+        res.render('index', { latestWorks, latestNovels, menu: NAV_MENU, seo: seo.homeSeo() });
     } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
+});
+
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send(seo.robotsTxt());
+});
+
+let sitemapCache = { xml: null, at: 0 };
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        if (!sitemapCache.xml || Date.now() - sitemapCache.at > SITEMAP_TTL_MS) {
+            const works = await Work.find({ slug: { $exists: true, $ne: '' } })
+                .select('slug updatedAt')
+                .sort({ createdAt: -1 })
+                .limit(SITEMAP_MAX_URLS - NAV_MENU.length - 1000)
+                .lean();
+            const entries = [{ path: '/' }]
+                .concat(NAV_MENU.map((m) => ({ path: m.href })))
+                .concat(works.map((w) => ({ path: '/' + w.slug, lastmod: w.updatedAt })));
+            const novels = await Novel.find({ status: 'published' }).select('slug updatedAt').lean();
+            novels.forEach((n) => entries.push({ path: `/sach/${n.slug}`, lastmod: n.updatedAt }));
+            const remaining = SITEMAP_MAX_URLS - entries.length;
+            if (novels.length && remaining > 0) {
+                const chapters = await Chapter.find({ novel: { $in: novels.map((n) => n.slug) }, status: 'published' })
+                    .select('novel no updatedAt').limit(remaining).lean();
+                chapters.forEach((c) => entries.push({ path: `/sach/${c.novel}/chuong-${c.no}`, lastmod: c.updatedAt }));
+            }
+            sitemapCache = { xml: seo.buildSitemap(entries), at: Date.now() };
+        }
+        res.type('application/xml').send(sitemapCache.xml);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
+});
+
+app.get('/tim-kiem', async (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 100);
+    const page = parsePage(req.query.page);
+    const render = (works, total) => {
+        const totalPages = Math.max(1, Math.ceil(total / config.pageSize));
+        res.render('category', {
+            title: q ? `Kết quả cho “${q}”` : 'Tìm kiếm',
+            subtitle: q ? `Tìm thấy ${total} truyện phù hợp.` : 'Nhập từ khoá để tìm truyện.',
+            emptyMessage: q ? 'Không tìm thấy truyện nào phù hợp. Hãy thử từ khoá khác.' : 'Hãy nhập từ khoá vào ô tìm kiếm.',
+            works,
+            query: q,
+            menu: NAV_MENU,
+            seo: seo.searchSeo(q),
+            pagination: {
+                page,
+                totalPages,
+                url: (n) => `/tim-kiem?q=${encodeURIComponent(q)}&page=${n}`
+            }
+        });
+    };
+
+    if (!q) return render([], 0);
+
+    try {
+        const filter = { $text: { $search: q } };
+        const [works, total] = await Promise.all([
+            Work.find(filter, { score: { $meta: 'textScore' } })
+                .select(LIST_FIELDS)
+                .sort({ score: { $meta: 'textScore' } })
+                .skip((page - 1) * config.pageSize)
+                .limit(config.pageSize)
+                .lean(),
+            Work.countDocuments(filter)
+        ]);
+        render(works, total);
+    } catch (error) {
+        console.error(error);
         res.status(500).send('Server Error');
     }
 });
@@ -110,41 +227,82 @@ app.get('/', async (req, res) => {
 // Dynamic Slug Route
 app.get('/:slug', async (req, res, next) => {
     const slug = req.params.slug.replace(/["%22]/g, '').replace(/%20/g, '-'); // Clean potential quotes and convert %20 to hyphen
-    
+
     // 1. Check if it's a category
     const menuItem = NAV_MENU.find(m => m.href === '/' + slug);
     if (menuItem) {
         try {
-            const works = await Work.find({ 
+            const page = parsePage(req.query.page);
+            const filter = {
                 $or: [
-                    { category: new RegExp(menuItem.name.replace('Truyện ', ''), 'i') },
-                    { category: new RegExp(menuItem.name, 'i') }
+                    { category: new RegExp(escapeRegex(menuItem.name.replace('Truyện ', '')), 'i') },
+                    { category: new RegExp(escapeRegex(menuItem.name), 'i') }
                 ]
-            }).sort({ createdAt: -1 });
-            return res.render('category', { title: menuItem.name, works, menu: NAV_MENU });
+            };
+            const [works, total] = await Promise.all([
+                Work.find(filter)
+                    .select(LIST_FIELDS)
+                    .sort({ createdAt: -1 })
+                    .skip((page - 1) * config.pageSize)
+                    .limit(config.pageSize)
+                    .lean(),
+                Work.countDocuments(filter)
+            ]);
+            const totalPages = Math.max(1, Math.ceil(total / config.pageSize));
+            return res.render('category', {
+                title: menuItem.name,
+                works,
+                menu: NAV_MENU,
+                seo: seo.categorySeo(menuItem, page, totalPages),
+                pagination: {
+                    page,
+                    totalPages,
+                    url: (n) => menuItem.href + (n > 1 ? `?page=${n}` : '')
+                }
+            });
         } catch (err) {
+            console.error(err);
             return res.status(500).send('Server Error');
         }
     }
 
     // 2. Check if it's a specific Work
     try {
-        const work = await Work.findOne({ slug: slug });
+        // Bot không tính lượt xem; người đọc thật tăng views và lấy bài trong một truy vấn
+        const isBot = BOT_UA.test(req.get('user-agent') || '');
+        const work = isBot
+            ? await Work.findOne({ slug }).lean()
+            : await Work.findOneAndUpdate({ slug }, { $inc: { views: 1 } }, { new: true }).lean();
         if (!work) return next();
-        
-        await Work.updateOne({ _id: work._id }, { $inc: { views: 1 } });
-        work.views += 1;
 
-        const related = await Work.find({ category: work.category, _id: { $ne: work._id } }).limit(4);
-        res.render('detail', { work, related, menu: NAV_MENU });
+        const related = await Work.find({ category: work.category, _id: { $ne: work._id } })
+            .select(LIST_FIELDS)
+            .limit(4)
+            .lean();
+        res.render('detail', {
+            work,
+            related,
+            menu: NAV_MENU,
+            contentHtml: renderContent(work.content),
+            readMin: readingMinutes(work.content),
+            source: sourceInfo(work.sourceUrl),
+            seo: seo.workSeo(work, menuItemForCategory(work.category))
+        });
     } catch (error) {
+        console.error(error);
         res.status(500).send('Server Error');
     }
 });
 
 // Final 404
 app.use((req, res) => {
-    res.status(404).render('category', { title: '404 - Không tìm thấy', works: [], menu: NAV_MENU });
+    res.status(404).render('category', {
+        title: '404 - Không tìm thấy',
+        works: [],
+        menu: NAV_MENU,
+        seo: seo.notFoundSeo(),
+        pagination: null
+    });
 });
 
 app.listen(PORT, () => {

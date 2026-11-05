@@ -1,0 +1,63 @@
+<%- include('_top', { pageTitle: 'Truyện của tôi' }) %>
+<header class="adm-bar">
+    <div class="logo">V</div>
+    <h1>Văn Hay Admin</h1>
+    <a href="/" class="icon-btn" aria-label="Xem website"><%- ico('globe') %></a>
+</header>
+
+<main class="adm-wrap">
+    <section class="hero">
+        <small>Bảng điều khiển</small>
+        <h2>Xin chào, người kể chuyện</h2>
+    </section>
+
+    <section class="stats" aria-label="Thống kê">
+        <div class="stat"><b><%= totals.novels %></b><span>Truyện</span></div>
+        <div class="stat"><b><%= totals.published %></b><span>Đã đăng</span></div>
+        <div class="stat"><b><%= totals.draft %></b><span>Nháp</span></div>
+        <div class="stat"><b><%= totals.words >= 1000 ? (totals.words / 1000).toFixed(1) + 'k' : totals.words %></b><span>Từ</span></div>
+    </section>
+
+    <div class="sec-title"><h3>Truyện của bạn</h3><span><%= novels.length %> bộ</span></div>
+
+    <% if (novels.length === 0) { %>
+        <div class="card empty">
+            <%- ico('book') %>
+            <p><b>Chưa có truyện nào</b></p>
+            <p class="mb-4 mt-1">Bấm nút + để bắt đầu bộ truyện đầu tiên.</p>
+        </div>
+    <% } %>
+
+    <% novels.forEach(n => { const c = byNovel[n.slug] || { draft: 0, published: 0, words: 0 }; const total = c.draft + c.published; %>
+        <a href="/admin/novels/<%= n.slug %>" class="card novel-card">
+            <div class="cover cover-sm <%= cover(n.slug) %>"><span class="serif"><%= initial(n.title) %></span></div>
+            <div class="meta">
+                <h4><%= n.title %></h4>
+                <p><%= n.synopsis || 'Chưa có giới thiệu.' %></p>
+                <div class="chips">
+                    <span class="chip chip-dot <%= n.status === 'published' ? 'chip-ok' : 'chip-draft' %>"><%= n.status === 'published' ? 'Đã đăng' : 'Nháp' %></span>
+                    <span class="chip chip-brand"><%= total %> chương<%= n.source === 'ainovel' ? ' · AI' : '' %></span>
+                </div>
+                <div class="progress" aria-hidden="true"><i class="<%= pct10(c.published, total) %>"></i></div>
+            </div>
+        </a>
+    <% }) %>
+</main>
+
+<nav class="tabbar" aria-label="Điều hướng">
+    <a class="tab" href="/admin" aria-current="page"><%- ico('book') %>Truyện</a>
+    <button class="fab" type="button" data-open="sheet-create" aria-label="Tạo truyện mới"><%- ico('plus') %></button>
+    <a class="tab" href="/"><%- ico('globe') %>Website</a>
+</nav>
+
+<div class="backdrop" data-close></div>
+<form class="sheet" id="sheet-create" data-form="create-novel">
+    <h3>Truyện mới</h3>
+    <label class="label" for="nt">Tên truyện</label>
+    <input id="nt" class="field" name="title" required maxlength="200" placeholder="Ví dụ: Tấm Cám ngoại truyện">
+    <label class="label" for="ns">Giới thiệu ngắn</label>
+    <textarea id="ns" class="field" name="synopsis" rows="4" maxlength="5000" placeholder="Truyện kể về điều gì?"></textarea>
+    <button class="btn btn-primary btn-block mt-form"><%- ico('spark') %> Tạo truyện</button>
+    <p data-msg class="label msg"></p>
+</form>
+<%- include('_bottom') %>

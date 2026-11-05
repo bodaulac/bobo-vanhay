@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Chữ V vàng -->
+    <path
+        android:fillColor="#E3A93B"
+        android:pathData="M30,34 L42,34 L54,66 L66,34 L78,34 L60,80 L48,80 Z" />
+    <!-- Tia sáng AI -->
+    <path
+        android:fillColor="#FFF3D6"
+        android:pathData="M76,22 L78.2,28.2 L84.4,30.4 L78.2,32.6 L76,38.8 L73.8,32.6 L67.6,30.4 L73.8,28.2 Z" />
+</vector>

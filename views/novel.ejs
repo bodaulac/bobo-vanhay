@@ -1,0 +1,41 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<section class="pub-hero">
+    <div class="pub-hero-in">
+        <div class="novel-hero-pub">
+            <div class="cover cover-xl <%= cover(novel.slug) %>"><span class="serif"><%= initial(novel.title) %></span></div>
+            <div>
+                <span class="eyebrow">Truyện dài · <%= total %> chương</span>
+                <h1 class="serif"><%= novel.title %></h1>
+                <p class="read-meta hero-meta"><span><%- ico('user') %><%= novel.author %></span></p>
+                <p class="synopsis"><%= novel.synopsis %></p>
+                <% if (chapters.length > 0) { %>
+                    <a href="/sach/<%= novel.slug %>/chuong-<%= chapters[0].no %>" class="btn btn-gold start-btn"><%- ico('book') %> Đọc từ đầu</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</section>
+
+<main class="wrap sec">
+    <div class="sec-head"><h2>Danh sách chương</h2><span><%= total %> chương</span></div>
+    <% if (chapters.length === 0) { %><div class="empty-state"><%- ico('book') %><p>Chưa có chương nào được đăng.</p></div><% } %>
+    <ol class="chap-list">
+        <% chapters.forEach(ch => { %>
+            <li><a href="/sach/<%= novel.slug %>/chuong-<%= ch.no %>">
+                <span class="no"><%= ch.no %></span><b><%= ch.title %></b><small><%= ch.wordCount %> từ</small>
+            </a></li>
+        <% }) %>
+    </ol>
+
+    <% if (pagination.totalPages > 1) { %>
+        <nav class="pager" aria-label="Phân trang">
+            <% if (pagination.page > 1) { %><a href="<%= pagination.url(pagination.page - 1) %>" rel="prev">← Trước</a><% } %>
+            <span>Trang <%= pagination.page %> / <%= pagination.totalPages %></span>
+            <% if (pagination.page < pagination.totalPages) { %><a href="<%= pagination.url(pagination.page + 1) %>" rel="next">Sau →</a><% } %>
+        </nav>
+    <% } %>
+</main>
+
+<%- include('partials/footer') %>

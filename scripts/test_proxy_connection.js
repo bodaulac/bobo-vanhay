@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 import axios from 'axios';
+import config from '../config.js';
 
 async function testProxyConnection() {
     console.log("🧪 TESTING AI PROXY CONNECTION");
     console.log("=" .repeat(50));
     
-    const AI_PROXY_URL = "http://127.0.0.1:9090/v1/chat/completions";
-    const AI_PROXY_AUTH = "Bearer cliproxy-secret";
+    const AI_PROXY_URL = config.aiProxy.url;
+    const AI_PROXY_AUTH = config.aiProxy.auth;
     
     // Test 1: Check proxy is running
     console.log("\n1. 🔍 Checking proxy availability...");
@@ -120,7 +121,7 @@ YÊU CẦU:
     console.log("\n📋 RECOMMENDATIONS:");
     console.log("-" .repeat(30));
     console.log("• Use model: gemini-3-pro-preview");
-    console.log("• Auth: Bearer cliproxy-secret");
+    console.log("• Auth: Bearer <AI_PROXY_KEY>");
     console.log("• URL: http://127.0.0.1:9090/v1/chat/completions");
     console.log("• Timeout: 30 seconds");
     console.log("• Rate limit: Check proxy logs");

@@ -9,7 +9,7 @@ async function testGeminiIntegration() {
     // Test 1: Check AI Proxy configuration
     console.log("\n1. 🔍 Checking AI Proxy configuration...");
     console.log("   Proxy URL: http://127.0.0.1:9090/v1/chat/completions");
-    console.log("   Auth: Bearer cliproxy-secret");
+    console.log("   Auth: Bearer <AI_PROXY_KEY>");
     console.log("   Model: gemini-3-pro-preview");
     
     // Test 2: Test API connection

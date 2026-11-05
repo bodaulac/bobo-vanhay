@@ -1,8 +1,9 @@
 const axios = require('axios');
+const config = require('../config.js');
 
 async function listDirect() {
-    const keyID = '005a2c220d9db480000000003';
-    const applicationKey = 'K005XqKlkjAY9kIG/w8AmrUotVwSTkE';
+    const keyID = config.b2.keyId;
+    const applicationKey = config.b2.key;
     const authBase64 = Buffer.from(`${keyID}:${applicationKey}`).toString('base64');
 
     try {

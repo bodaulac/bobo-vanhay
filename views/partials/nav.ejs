@@ -1,0 +1,15 @@
+<header class="pub-header">
+    <div class="pub-row">
+        <a href="/" class="brand" aria-label="Văn Hay - Trang chủ"><span class="logo">V</span><span>Văn Hay</span></a>
+        <form action="/tim-kiem" method="get" role="search" class="pub-search">
+            <input type="search" name="q" maxlength="100" required value="<%= typeof query === 'string' ? query : '' %>" aria-label="Tìm kiếm truyện" placeholder="Tìm truyện...">
+            <button aria-label="Tìm"><%- ico('search') %></button>
+        </form>
+        <a href="/tim-kiem" class="search-link cat-pill" aria-label="Tìm kiếm"><%- ico('search') %></a>
+    </div>
+    <nav class="cats" aria-label="Chuyên mục">
+        <% menu.forEach(item => { %>
+            <a href="<%= item.href %>" class="cat-pill" <%- (typeof currentPath === 'string' && currentPath.indexOf(item.href) === 0) ? 'aria-current="page"' : '' %>><%= item.icon %> <%= item.href === '/sach' ? 'Truyện dài' : item.name.replace('Truyện ', '') %></a>
+        <% }) %>
+    </nav>
+</header>

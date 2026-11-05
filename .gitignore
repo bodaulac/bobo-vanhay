@@ -88,3 +88,13 @@ Thumbs.db
 # Logs
 logs
 *.log
+# ainovel-cli: thư mục làm việc (chứa bản thảo, có thể chứa cấu hình/khoá)
+workspace/
+.ainovel/
+
+# Android (app quản trị)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/dist/

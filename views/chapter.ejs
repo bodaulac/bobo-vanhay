@@ -1,0 +1,30 @@
+<%- include('partials/head') %>
+<div class="read-progress" aria-hidden="true"><i id="read-bar"></i></div>
+<%- include('partials/nav') %>
+
+<main class="read-wrap" id="reader" data-size="1">
+    <nav class="crumbs" aria-label="Đường dẫn">
+        <a href="/sach">Truyện dài</a><span>›</span><a href="/sach/<%= novel.slug %>"><%= novel.title %></a>
+    </nav>
+
+    <article>
+        <header class="read-head">
+            <span class="chip chip-brand">Chương <%= chapter.no %></span>
+            <h1 class="read-title"><%= chapter.title %></h1>
+            <div class="read-meta">
+                <span><%- ico('clock') %><%= readMin %> phút đọc</span>
+                <span><%- ico('book') %><%= chapter.wordCount %> từ</span>
+            </div>
+        </header>
+        <div class="orn" aria-hidden="true"><%- ico('spark') %></div>
+        <div class="work-content dropcap"><%- contentHtml %></div>
+    </article>
+
+    <nav class="chap-nav" aria-label="Chuyển chương">
+        <% if (prev) { %><a href="/sach/<%= novel.slug %>/chuong-<%= prev.no %>" rel="prev"><small>← Chương trước</small><b><%= prev.title %></b></a><% } %>
+        <% if (next) { %><a href="/sach/<%= novel.slug %>/chuong-<%= next.no %>" rel="next" class="next <%= prev ? '' : 'solo' %>"><small>Chương sau →</small><b><%= next.title %></b></a><% } %>
+    </nav>
+</main>
+
+<%- include('partials/dock', { showNav: true, prevUrl: prev ? '/sach/' + novel.slug + '/chuong-' + prev.no : null, nextUrl: next ? '/sach/' + novel.slug + '/chuong-' + next.no : null, toc: '/sach/' + novel.slug }) %>
+<%- include('partials/footer') %>

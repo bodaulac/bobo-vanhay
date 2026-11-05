@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'bobo-vanhoc',
     script: 'server.js',
-    cwd: '/home/jay/bobo-vanhoc-v2',
+    cwd: __dirname,
     instances: 1,
     autorestart: true,
     watch: false,

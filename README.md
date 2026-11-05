@@ -4,15 +4,13 @@ Hệ thống văn học Việt Nam với AI enhancement và crawler tự động
 
 ## 🚀 Tính năng chính
 
-### 📚 Crawler System (8 crawlers)
+### 📚 Crawler System (6 crawlers)
 1. **gemini_crawler.js** - Crawl + AI enhancement với Gemini Pro 3
 2. **enhanced_crawler.js** - Crawl + local AI (Ollama)
 3. **simple_crawler.js** - Crawl cơ bản từ truyencotich.net
 4. **simple_crawler_with_b2.js** - Crawl + upload ảnh lên Backblaze B2
 5. **local_ai_crawler.js** - Crawl + local AI processing
 6. **power_crawler.js** - Batch processing crawler
-7. **crawler_truyencotich.js** - Legacy crawler
-8. **crawler_rewrite.js** - Crawl + basic rewrite
 
 ### 🤖 AI Enhancement
 - **Gemini Pro 3** - Chất lượng cao nhất
@@ -26,6 +24,55 @@ Hệ thống văn học Việt Nam với AI enhancement và crawler tự động
 - **AI-enhanced content** storage
 - **Image URL management**
 
+### 🔎 SEO & trải nghiệm đọc
+- Meta description, canonical, Open Graph, JSON-LD (WebSite, Article, BreadcrumbList)
+- `/sitemap.xml` (cache 1 giờ) và `/robots.txt` sinh động theo `SITE_URL`
+- Tìm kiếm toàn văn `/tim-kiem?q=...` (MongoDB text index, không index trang kết quả)
+- Chế độ đọc: chỉnh cỡ chữ, nền tối (lưu trong trình duyệt)
+- Nội dung bài viết được lọc HTML (sanitize) trước khi hiển thị
+
+### ✍️ Viết truyện dài (ainovel-cli + novel)
+
+Tích hợp hai dự án mã nguồn mở (đều Apache-2.0):
+
+- [voocel/ainovel-cli](https://github.com/voocel/ainovel-cli) (Go): engine AI tự viết cả cuốn truyện nhiều chương. Chạy như tiến trình riêng, **không nhúng vào Node**.
+- [steven-tey/novel](https://github.com/steven-tey/novel) (Tiptap): trình soạn thảo kiểu Notion cho trang quản trị, kèm các nút AI.
+
+Luồng làm việc:
+
+```
+ainovel-cli (headless) → output/novel/ → scripts/import_ainovel.js → MongoDB (nháp)
+                                                                        ↓
+                       /admin: sửa chương bằng trình soạn thảo + AI → Đăng → /sach/<truyện>/chuong-<n>
+```
+
+**1. Viết bằng ainovel-cli** (cài theo hướng dẫn của dự án, chạy `ainovel-cli` một lần để cấu hình API key):
+
+```bash
+scripts/ainovel_write.sh tam-cam-moi "Viết truyện dã sử Việt về cô Tấm sau khi làm hoàng hậu, 20 chương"
+```
+
+Script tạo `workspace/<tên>/`, copy quy tắc tiếng Việt từ `ainovel/rules/`, chạy headless (chạy lại cùng tên sẽ tự **tiếp tục** từ checkpoint) rồi import vào MongoDB ở trạng thái **nháp**. Import lại an toàn: chương không đổi thì bỏ qua, chương đã sửa tay chỉ bị ghi đè khi thêm `--force`.
+
+> ⚠️ ainovel-cli được thiết kế cho truyện mạng tiếng Trung (prompt hệ thống bằng tiếng Trung, yêu cầu về ngôn ngữ chỉ được thêm qua `ainovel/rules/`). Chất lượng tiếng Việt cần được kiểm tra bằng một cuốn thử trước khi dùng thật.
+
+**2. Biên tập & đăng ở `/admin`:** đặt `ADMIN_TOKEN` trong `.env`, vào `/admin` (đăng nhập Basic Auth, mật khẩu = token). Tại đây tạo truyện, thêm/sửa chương, dùng nút AI (Viết tiếp, Chau chuốt, Rút gọn, Kéo dài, Sửa lỗi, yêu cầu riêng) rồi đặt "Đã đăng". Truyện và chương chỉ hiện công khai khi **cả hai** đều ở trạng thái đăng.
+
+**3. Build trình soạn thảo:** `npm run build` (CSS + `public/assets/editor.js`); cả hai file đã được commit sẵn. Nên giới hạn `/admin` theo IP hoặc VPN ở nginx.
+
+### 📱 App Android quản trị (APK)
+
+Thư mục `android/` là vỏ WebView mở `/admin` của website, để admin tạo truyện, soạn chương và dùng nút AI ngay trên điện thoại (mật khẩu quản trị được mã hoá bằng Android Keystore; liên kết ra ngoài mở bằng trình duyệt).
+
+```bash
+cd android
+# Cần JDK 17+, Gradle 8.x và Android SDK (platform 34, build-tools 34.0.0); trỏ ANDROID_HOME hoặc tạo android/local.properties (sdk.dir=...)
+gradle assembleDebug -PappUrl=https://vanhay.info
+# → android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Cài APK lên điện thoại (bật "cài từ nguồn không rõ"), mở app, nhập `ADMIN_TOKEN` ở lần đầu. Muốn xoá mật khẩu đã lưu: Cài đặt → Ứng dụng → Văn Hay Admin → Xoá dữ liệu. APK build ở chế độ debug (ký bằng khoá debug) — đủ để cài thủ công; muốn phát hành lâu dài hãy build `assembleRelease` với keystore riêng.
+
 ### 🌐 Web Interface
 - **Express.js server** trên port 3004
 - **EJS templates** cho frontend
@@ -37,12 +84,14 @@ Hệ thống văn học Việt Nam với AI enhancement và crawler tự động
 ```
 bobo-vanhoc-v2/
 ├── server.js              # Web server chính
+├── config.js              # Cấu hình từ .env
+├── .env.example           # Mẫu biến môi trường
 ├── ecosystem.config.js    # PM2 configuration
 ├── package.json          # Dependencies
 ├── README.md             # This file
 ├── .gitignore           # Git ignore rules
 ├── models/              # Mongoose models
-├── scripts/             # 8 crawler scripts
+├── scripts/             # 6 crawler scripts
 ├── public/              # Static files (CSS, JS, images)
 ├── views/               # EJS templates
 └── node_modules/        # Dependencies
@@ -66,11 +115,14 @@ cp .env.example .env
 docker run -d --name xs-mongo \
   -p 27017:27017 \
   -e MONGO_INITDB_ROOT_USERNAME=root \
-  -e MONGO_INITDB_ROOT_PASSWORD=examplepassword \
+  -e MONGO_INITDB_ROOT_PASSWORD=<mật-khẩu-của-bạn> \
   mongo:latest --replSet rs0 --auth
 
 # Initialize replica set
 docker exec -it xs-mongo mongosh --eval "rs.initiate()"
+
+# Build CSS (Tailwind) - file public/css/app.css đã commit sẵn, chỉ cần build lại khi sửa giao diện
+npm run build:css
 
 # Start the application
 npm start
@@ -101,8 +153,7 @@ pm2 stop bobo-vanhoc
 
 ```bash
 # Check số lượng stories
-cd /home/jay/bobo-vanhoc-v2
-node -e "const mongoose = require('mongoose'); mongoose.connect('mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0').then(async () => { const Story = mongoose.models.Work || mongoose.model('Work', new mongoose.Schema({})); const count = await Story.countDocuments(); console.log('📊 Total stories:', count); mongoose.disconnect(); })"
+node scripts/check_db.js
 ```
 
 ## 🎯 Crawler Usage
@@ -123,14 +174,20 @@ node scripts/simple_crawler_with_b2.js
 Tạo file `.env`:
 
 ```env
-MONGODB_URI=mongodb://root:examplepassword@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0
-GEMINI_API_KEY=your_gemini_api_key
-DEEPSEEK_API_KEY=your_deepseek_api_key
+MONGODB_URI=mongodb://USER:PASSWORD@127.0.0.1:27017/bobo-vanhoc?authSource=admin&directConnection=true&replicaSet=rs0
+AI_PROXY_URL=http://127.0.0.1:9090/v1/chat/completions
+AI_PROXY_KEY=your_proxy_key
 B2_APPLICATION_KEY_ID=your_b2_key_id
 B2_APPLICATION_KEY=your_b2_key
 B2_BUCKET_NAME=your_bucket_name
 PORT=3004
+SITE_URL=https://vanhay.info
+ADMIN_TOKEN=chuoi_dai_ngau_nhien
+AI_MODEL=deepseek-chat
+PAGE_SIZE=12
 ```
+
+Xem đầy đủ trong `.env.example`. Cấu hình đọc qua `config.js`; schema dùng chung ở `models/Work.js`.
 
 ## 📈 Monitoring
 

@@ -1,10 +1,11 @@
 import axios from 'axios';
+import config from '../../../config.js';
 
 class GeminiService {
     constructor() {
         // AI Proxy configuration
-        this.AI_PROXY_URL = "http://127.0.0.1:9090/v1/chat/completions";
-        this.AI_PROXY_AUTH = "Bearer cliproxy-secret";
+        this.AI_PROXY_URL = config.aiProxy.url;
+        this.AI_PROXY_AUTH = config.aiProxy.auth;
         this.DEFAULT_MODEL = "deepseek-chat"; // Using DeepSeek which is working
         
         console.log('✅ Gemini Service (via AI Proxy) initialized');
@@ -160,7 +161,7 @@ CHỈ TRẢ VỀ NỘI DUNG ĐÃ VIẾT LẠI, KHÔNG THÊM BẤT KỲ GIẢI TH
                     console.error('💡 AI Proxy not running at http://127.0.0.1:9090');
                     console.error('💡 Start the proxy or check the URL');
                 } else if (error.message.includes('401')) {
-                    console.error('💡 Authentication failed. Check cliproxy-secret');
+                    console.error('💡 Authentication failed. Check AI_PROXY_KEY');
                 } else if (error.message.includes('timeout')) {
                     console.error('💡 Proxy timeout. Check proxy health');
                 }
@@ -337,7 +338,7 @@ CHỈ TRẢ VỀ PROMPT, KHÔNG THÊM GIẢI THÍCH.
         console.error('❌ All AI Proxy connections failed');
         console.error('💡 Check:');
         console.error('   1. AI Proxy at http://127.0.0.1:9090');
-        console.error('   2. Authentication: Bearer cliproxy-secret');
+        console.error('   2. Authentication: Bearer <AI_PROXY_KEY>');
         console.error('   3. Internet connection');
         
         return false;

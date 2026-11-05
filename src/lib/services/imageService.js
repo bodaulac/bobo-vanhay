@@ -1,10 +1,11 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const config = require('../../../config.js');
 
 class ImageService {
     constructor() {
-        this.keyId = '005a2c220d9db480000000003';
-        this.applicationKey = 'K005XqKlkjAY9kIG/w8AmrUotVwSTkE';
+        this.keyId = config.b2.keyId;
+        this.applicationKey = config.b2.key;
         this.authBase64 = Buffer.from(`${this.keyId}:${this.applicationKey}`).toString('base64');
     }
 
